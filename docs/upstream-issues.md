@@ -1,6 +1,6 @@
 # Upstream issues to file
 
-These are server bugs this backend works around. Each one has a draft issue ready to file. **Nothing here has been filed yet:** filing is a public action, so confirm with the project owner first. When an issue is filed, record its link and date here. When it is fixed upstream, note the version and whether the workaround can go.
+These are server bugs this backend works around. Each one has a draft issue ready to file. Filing is a public action, so confirm with the project owner first. When an issue is filed, record its link and date here. When it is fixed upstream, note the version and whether the workaround can go.
 
 ## armadietto
 
@@ -28,7 +28,7 @@ So any app that lets users pick names with spaces or punctuation sees those fold
 
 ### 1. Folder listing keys are percent-encoded (spec says item names)
 
-**Status:** not filed. **Workaround:** `vendor = armadietto` (`armadiettoName` in `backend/remotestorage/remotestorage.go`).
+**Status:** filed 2026-10-19 as [#173](https://github.com/remotestorage/armadietto/issues/173). **Workaround:** `vendor = armadietto` (`armadiettoName` in `backend/remotestorage/remotestorage.go`).
 
 Draft:
 
@@ -50,7 +50,7 @@ Draft:
 
 ### 2. HEAD responses omit Content-Length
 
-**Status:** not filed. **Workaround:** with `vendor = armadietto`, metadata comes from the parent listing instead of HEAD.
+**Status:** filed 2026-10-19 as [#174](https://github.com/remotestorage/armadietto/issues/174). **Workaround:** with `vendor = armadietto`, metadata comes from the parent listing instead of HEAD.
 
 Draft:
 

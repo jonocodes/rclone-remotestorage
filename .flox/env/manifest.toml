@@ -4,6 +4,7 @@ schema-version = "1.10.0"
 go.pkg-path = "go"
 just.pkg-path = "just"
 just.outputs = "all"
+bun.pkg-path = "bun"
 
 [vars]
 CGO_ENABLED = "0"
