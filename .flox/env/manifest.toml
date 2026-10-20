@@ -1,0 +1,9 @@
+schema-version = "1.10.0"
+
+[install]
+go.pkg-path = "go"
+just.pkg-path = "just"
+just.outputs = "all"
+
+[vars]
+CGO_ENABLED = "0"

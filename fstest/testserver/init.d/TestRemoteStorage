@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Self-starting test server for TestRemoteStorage:, in rclone's
+# fstest/testserver/init.d convention: "start" prints key=value config lines,
+# which fstests turns into RCLONE_CONFIG_TESTREMOTESTORAGE_* env vars.
+set -euo pipefail
+ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+case ${1:-} in
+start)
+  "$ROOT/test/armadietto.sh" start | sed -n 's/^export RCLONE_CONFIG_TESTREMOTESTORAGE_\([A-Z_]*\)=/\L\1=/p' \
+    | sed 's/^type=/type=/'
+  echo "_connect=127.0.0.1:${ARMADIETTO_PORT:-18001}"
+  ;;
+stop) "$ROOT/test/armadietto.sh" stop ;;
+status) docker inspect -f '{{.State.Running}}' "${ARMADIETTO_NAME:-rclone-rs-armadietto}" 2>/dev/null | grep -q true && echo running || echo stopped ;;
+*) echo "usage: $0 start|stop|status" >&2; exit 2 ;;
+esac
