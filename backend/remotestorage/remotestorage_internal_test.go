@@ -200,3 +200,24 @@ func TestArmadiettoName(t *testing.T) {
 		assert.Equal(t, name, armadiettoName(key), key)
 	}
 }
+
+// A category-scoped token (scope "rclone-test:rw") makes 5apps answer 401 to
+// the root-is-a-file probe HEAD /rclone-test; the remote must still open.
+func TestNewFsScopedRootProbe(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/storage/alice/rclone-test/":
+			_, _ = io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{"a.txt":{"ETag":"1","Content-Type":"text/plain","Content-Length":1}}}`)
+		default:
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	m := configmap.Simple{"storage_root": srv.URL + "/storage/alice", "token": "tok"}
+	f, err := NewFs(context.Background(), "test", "rclone-test", m)
+	require.NoError(t, err)
+	assert.Equal(t, "rclone-test", f.Root())
+	entries, err := f.List(context.Background(), "")
+	require.NoError(t, err)
+	assert.Len(t, entries, 1)
+}

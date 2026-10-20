@@ -349,7 +349,7 @@ func errorHandler(resp *http.Response) error {
 	}
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
-		return fserrors.NoRetryError(fmt.Errorf("token rejected or expired, get a new one with \"rclone config reconnect\" or update the remote's token: %w", e))
+		return fserrors.NoRetryError(fmt.Errorf("token rejected: it has expired, was revoked, or doesn't cover this path (check the remote's scope); get a new one with \"rclone config reconnect\": %w", e))
 	case http.StatusForbidden:
 		return fserrors.NoRetryError(fmt.Errorf("path is outside the token's scope: %w", e))
 	case http.StatusPreconditionFailed:
@@ -409,7 +409,11 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 		f.root = parentDir(root)
 		_, err := f.NewObject(ctx, remote)
 		if err != nil {
-			if errors.Is(err, fs.ErrorObjectNotFound) || errors.Is(err, fs.ErrorIsDir) {
+			// A document directly under the storage root is outside any
+			// category scope (e.g. "photos:rw" for root "photos"), and servers
+			// answer 401 (5apps) or 403 there, so treat that as "not a file".
+			code := statusCode(err)
+			if errors.Is(err, fs.ErrorObjectNotFound) || errors.Is(err, fs.ErrorIsDir) || code == http.StatusUnauthorized || code == http.StatusForbidden {
 				f.root = root
 				return f, nil
 			}
@@ -465,8 +469,9 @@ func (f *Fs) readDir(ctx context.Context, dir string) (*api.Listing, error) {
 // List the objects and directories in dir into entries
 func (f *Fs) List(ctx context.Context, dir string) (entries fs.DirEntries, err error) {
 	listing, err := f.readDir(ctx, dir)
-	if errors.Is(err, fs.ErrorDirNotFound) && (f.isKnownDir(dir) || f.dirPath(dir) == "") {
-		// the storage root always exists
+	if errors.Is(err, fs.ErrorDirNotFound) && (dir == "" || f.isKnownDir(dir)) {
+		// an empty folder can't be told from a missing one, so the remote's
+		// root always exists (e.g. an empty category the token is scoped to)
 		return nil, nil
 	}
 	if err != nil {

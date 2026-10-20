@@ -2,7 +2,7 @@
 
 A generic [rclone](https://rclone.org) backend for the [remoteStorage](https://remotestorage.io) protocol ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/)). It should work with any compliant server: 5apps, armadietto, php-remote-storage, mysteryshack, RSilo, and others. The end goal is `rclone mount` of a remoteStorage account as a local drive.
 
-Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto, and login is tested end to end there. The same loopback flow (from the spike) was confirmed by hand against 5apps.
+Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto (automated, docker) and against a real 5apps account (manual run, 2026-10-19). Login is tested end to end against armadietto and was used for real against 5apps.
 
 ## How it is built
 
@@ -62,3 +62,16 @@ eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE
 ```
 
 Edits made by remoteStorage apps show up once the directory cache expires (`--dir-cache-time`). Change polling via the root folder's ETag is planned.
+
+## Testing against a real account
+
+The integration suite runs against any configured remote. Give it a name with no `init.d` script, so no test server is started, and point it at a scratch folder:
+
+```sh
+export RCLONE_CONFIG_TESTRS5APPS_TYPE=remotestorage \
+       RCLONE_CONFIG_TESTRS5APPS_STORAGE_ROOT=https://storage.5apps.com/<user> \
+       RCLONE_CONFIG_TESTRS5APPS_TOKEN=<token scoped to rclone-test:rw>
+go test ./backend/remotestorage/ -run TestIntegration -remote TestRS5apps:rclone-test -v
+```
+
+It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-10-19): 86 passed, 0 failed, in 75s.
