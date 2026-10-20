@@ -4,9 +4,27 @@ These are server bugs this backend works around. Each one has a draft issue read
 
 ## armadietto
 
-Checked against `remotestorage/armadietto` at `3251697` (2026-10-14), using the classic/monolithic server, Docker image `remotestorage/armadietto-monolithic:latest`. Searching the repo's issues on 2026-10-19 found nothing existing on either topic.
+Checked against `remotestorage/armadietto` at `3251697` (2026-10-14), using the classic/monolithic server, Docker image `remotestorage/armadietto-monolithic:latest`. ### Prior reports (searched 2026-10-19)
 
-The modular server (`lib/routes/S3_store_router.js`) doesn't use `decodeURI` for listings and is probably not affected by issue 1. That is untested.
+Neither bug has been reported or discussed anywhere we could find:
+
+- **armadietto issues and PRs** (open and closed): nothing for `decodeURI`, encoding, percent, special characters, listing names, HEAD or Content-Length. The nearest is [#151](https://github.com/remotestorage/armadietto/issues/151) (raucao, 2025-12), about the classic server's inconsistent spec-version claims. It led to [#155](https://github.com/remotestorage/armadietto/pull/155), which now advertises `-10`. That issue also calls the classic server "legacy" and says it should be "killed off as soon as possible", though self-hosters who don't want passkeys still rely on it. Expect a fix to be low priority.
+- **remotestorage.js, spec and api-test-suite issues:** no armadietto-specific encoding reports. The spec has long-open threads on what `URI_ENCODE` means and whether listings show encoded or decoded names ([spec#103](https://github.com/remotestorage/spec/issues/103), [#119](https://github.com/remotestorage/spec/issues/119), [#162](https://github.com/remotestorage/spec/issues/162)). In #119, untitaker reads the spec as listings showing names *unencoded*, which matches the draft below.
+- **community.remotestorage.io:** nothing. The only armadietto thread found ([t/759](https://community.remotestorage.io/t/759), If-None-Match/304) is unrelated.
+- **Git history:** both bugs come from lesion's 2018 rewrite. `decodeURI` arrived in `09c32ed` ("cleaning, v10 fully compliant", 2018-05-14). The HEAD branch is from `af5e781` ("head same as get without content", the same day). Neither line has been touched since.
+- **Modular server** (`lib/routes/S3_store_router.js`): doesn't use `decodeURI` for listings, and its GET path sets `Content-Length` from S3. Probably unaffected by both, but untested.
+
+### It breaks remotestorage.js apps too
+
+remotestorage.js uses listing keys as-is and builds URLs by running `encodeURIComponent` on each path segment (`cleanPath`, `src/util.ts` L59). Against armadietto, simulated with curl:
+
+```
+PUT t/my%20notes%3F/todo%20list.txt   → 201
+GET t/                                 → items: {"my%20notes%3F/": …}
+GET t/my%2520notes%253F/               → 200, items: {}   (rs.js re-encoding the listed key: the folder looks empty)
+```
+
+So any app that lets users pick names with spaces or punctuation sees those folders as empty on armadietto. That makes issue 1 a user-visible bug, not just a client nit, and is the strongest argument for the report. (This was simulated with curl from rs.js's `cleanPath`, not run with rs.js itself.)
 
 ### 1. Folder listing keys are percent-encoded (spec says item names)
 
