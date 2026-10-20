@@ -55,13 +55,13 @@ The integration suite runs against two local servers, started and stopped automa
 | `TestRemoteStorage:` | armadietto (classic) in Docker | old-style server: draft -10, no Last-Modified, no Range, its listing-name quirks (`vendor = armadietto`) |
 | `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline mode (bun + SQLite + a local directory) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
 
-RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF`. The Justfile sets it to the branch of jonocodes/RSilo#41 until that PR merges. Set `RSILO_SRC=<path>` to run a local RSilo checkout instead, for example while changing RSilo. Setting `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` makes that RSilo store its files in S3, e.g. a local SeaweedFS.
+RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (default `main`). Set `RSILO_SRC=<path>` to run a local RSilo checkout instead, for example while changing RSilo. Setting `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` makes that RSilo store its files in S3, e.g. a local SeaweedFS.
 
 ## Docs
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
-- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, and their status. armadietto [#173](https://github.com/remotestorage/armadietto/issues/173) and [#174](https://github.com/remotestorage/armadietto/issues/174) are filed; RSilo is fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
+- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, and their status. armadietto [#173](https://github.com/remotestorage/armadietto/issues/173) and [#174](https://github.com/remotestorage/armadietto/issues/174) are filed; RSilo was fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20).
 
 ## Mounting
 

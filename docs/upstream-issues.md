@@ -82,7 +82,7 @@ With a `rclone-test:rw` token, `HEAD /<user>/rclone-test` (a document outside th
 
 ## RSilo
 
-Running fstests against RSilo's offline server found problems with item names, missing Range support, and fidelity problems in the offline store. All were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (2026-10-19), and the backend needs no workarounds for RSilo. Once #41 merges, set `RSILO_REF` in the Justfile back to `main`.
+Running fstests against RSilo's offline server found problems with item names, missing Range support, and fidelity problems in the offline store. All were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41), merged 2026-10-20, and the backend needs no workarounds for RSilo.
 
 ## SeaweedFS
 
