@@ -1,3 +1,7 @@
+# rclone config for this project, never ~/.config/rclone/rclone.conf. flox
+# activation sets the same path; tests use a fresh throwaway config instead.
+export RCLONE_CONFIG := env("RCLONE_CONFIG", justfile_directory() / "rclone.conf")
+
 # List recipes
 default:
     @just --list
@@ -8,11 +12,16 @@ build:
 
 # Fast unit tests (no network, no docker)
 test:
-    go test ./backend/remotestorage/ -run 'Test[^I]'
+    RCLONE_CONFIG=$(mktemp -d)/rclone.conf go test ./backend/remotestorage/ -run 'Test[^I]'
 
 # rclone's fstests integration suite against a throwaway armadietto container
 test-integration *args:
-    go test ./backend/remotestorage/ -run TestIntegration -timeout 30m {{args}}
+    RCLONE_CONFIG=$(mktemp -d)/rclone.conf go test ./backend/remotestorage/ -run TestIntegration -timeout 30m {{args}}
+
+# fstests against a remote in ./rclone.conf, e.g. just test-remote rs5:rclone-test
+# (works in a random subfolder of the path and removes it afterwards)
+test-remote remote *args:
+    go test ./backend/remotestorage/ -run TestIntegration -remote {{remote}} -timeout 30m {{args}}
 
 # Start armadietto and print RCLONE_CONFIG_* exports: eval "$(just server)"
 server:

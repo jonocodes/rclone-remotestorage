@@ -37,7 +37,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-The environment comes from [flox](https://flox.dev) (Go, just, `CGO_ENABLED=0`). Docker or podman is needed for the test server.
+The environment comes from [flox](https://flox.dev) (Go, just, `CGO_ENABLED=0`). It also points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. The Justfile uses the same file, and test recipes each use a fresh throwaway config. Plain `go test` outside flox would fall back to the global config, so prefer the `just` recipes. Docker or podman is needed for the test server.
 
 ```sh
 flox activate
@@ -65,13 +65,11 @@ Edits made by remoteStorage apps show up once the directory cache expires (`--di
 
 ## Testing against a real account
 
-The integration suite runs against any configured remote. Give it a name with no `init.d` script, so no test server is started, and point it at a scratch folder:
+Log in to a scratch scope (the remote lands in `./rclone.conf`), then point the integration suite at it:
 
 ```sh
-export RCLONE_CONFIG_TESTRS5APPS_TYPE=remotestorage \
-       RCLONE_CONFIG_TESTRS5APPS_STORAGE_ROOT=https://storage.5apps.com/<user> \
-       RCLONE_CONFIG_TESTRS5APPS_TOKEN=<token scoped to rclone-test:rw>
-go test ./backend/remotestorage/ -run TestIntegration -remote TestRS5apps:rclone-test -v
+./rclone-remotestorage config create rs5 remotestorage user_address=<user>@5apps.com scope=rclone-test:rw
+just test-remote rs5:rclone-test
 ```
 
 It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-10-19): 86 passed, 0 failed, in 75s.

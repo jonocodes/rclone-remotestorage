@@ -7,3 +7,10 @@ just.outputs = "all"
 
 [vars]
 CGO_ENABLED = "0"
+
+[hook]
+# Never touch ~/.config/rclone/rclone.conf from this project: remotes made
+# here (e.g. a 5apps login) live in ./rclone.conf, which is gitignored.
+on-activate = '''
+export RCLONE_CONFIG="$FLOX_ENV_PROJECT/rclone.conf"
+'''
