@@ -91,3 +91,24 @@ Running fstests against RSilo's offline server found problems with item names, m
 **Status:** not filed. **Seen with:** `chrislusf/seaweedfs:4.48` (RSilo's CI S3 server), running RSilo with S3 storage.
 
 An object stored under `probe/back\slash.txt` (sent as `%5C`) can be read back with HEAD under that exact key, but ListObjectsV2 reports it as `probe/back/slash.txt`. R2 and AWS S3 keep `\` literally. The effect is that rclone's `FsEncoding/punctuation` case fails when RSilo runs on SeaweedFS, but not on its local store. There is no workaround in RSilo or in the backend, since it's a server listing bug.
+
+**Prior reports (searched 2026-10-20):**
+- [#11243](https://github.com/seaweedfs/seaweedfs/issues/11243) ("Issue with special characters in save path", closed 2026-09-09) reported `\` corrupting paths through the *filer* HTTP interface. It was fixed by [#11246](https://github.com/seaweedfs/seaweedfs/pull/11246), which switched `filepath.Split` to `path.Split` for filer paths.
+- 4.48 (released 2026-09-28) contains that fix and still shows the problem via the S3 gateway, so the S3 listing path is a separate bug.
+- No issue mentions backslashes in S3 keys or ListObjects.
+
+Draft:
+
+> **S3 ListObjectsV2 reports a backslash in a key as "/" (4.48)**
+>
+> With the S3 gateway (`weed server -s3`, 4.48, Linux), an object whose key contains `\` is stored and readable under its exact key, but ListObjectsV2 lists it with `/` in place of `\`:
+>
+> ```sh
+> aws --endpoint-url http://localhost:8333 s3 cp f.txt 's3://b/probe/back\slash.txt'
+> aws --endpoint-url http://localhost:8333 s3api head-object --bucket b --key 'probe/back\slash.txt'   # 200
+> aws --endpoint-url http://localhost:8333 s3api list-objects-v2 --bucket b --prefix probe/          # Key: probe/back/slash.txt
+> ```
+>
+> AWS S3 and Cloudflare R2 keep `\` as an ordinary key character, so a client that lists and then fetches by the listed key gets a 404, or sees a phantom folder `back/`. This looks like the S3 counterpart of #11243/#11246, where the filer path code treated `\` as a separator.
+
+The commands in the draft show the shape of the reproduction. The observed result came from RSilo's S3 adapter (SigV4 `PUT`/`HEAD`/`ListObjectsV2`) against `chrislusf/seaweedfs:4.48`. Re-run them with the aws CLI before filing.
