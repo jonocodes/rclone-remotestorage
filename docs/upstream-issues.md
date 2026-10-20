@@ -86,29 +86,57 @@ Running fstests against RSilo's offline server found problems with item names, m
 
 ## SeaweedFS
 
-### Backslash in an S3 key is listed as "/"
+### S3 keys: "\" is turned into "/" (and "//" collapsed), so distinct keys alias
 
-**Status:** not filed. **Seen with:** `chrislusf/seaweedfs:4.48` (RSilo's CI S3 server), running RSilo with S3 storage.
+**Status:** not filed. Verified 2026-10-20 against `chrislusf/seaweedfs:4.48` (`weed version`: `30GB 4.48 530be3e37 linux amd64`), using the aws CLI 2.34 and curl's SigV4 directly, with no RSilo code involved.
 
-An object stored under `probe/back\slash.txt` (sent as `%5C`) can be read back with HEAD under that exact key, but ListObjectsV2 reports it as `probe/back/slash.txt`. R2 and AWS S3 keep `\` literally. The effect is that rclone's `FsEncoding/punctuation` case fails when RSilo runs on SeaweedFS, but not on its local store. There is no workaround in RSilo or in the backend, since it's a server listing bug.
+**What happens:** `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`, around L255 at 4.48) runs on every S3 object key. It replaces `\` with `/` "for cross-platform compatibility" and collapses duplicate slashes. As a result:
+- `a\b` and `a/b` are the same object for PUT, GET, HEAD and DELETE.
+- Listings show the slash form. With `delimiter=/`, the object shows up as a folder.
 
-**Prior reports (searched 2026-10-20):**
-- [#11243](https://github.com/seaweedfs/seaweedfs/issues/11243) ("Issue with special characters in save path", closed 2026-09-09) reported `\` corrupting paths through the *filer* HTTP interface. It was fixed by [#11246](https://github.com/seaweedfs/seaweedfs/pull/11246), which switched `filepath.Split` to `path.Split` for filer paths.
-- 4.48 (released 2026-09-28) contains that fix and still shows the problem via the S3 gateway, so the S3 listing path is a separate bug.
-- No issue mentions backslashes in S3 keys or ListObjects.
+AWS S3 and R2 treat `\` and `//` as ordinary key characters. This is deliberate: it has applied to every key since [#7873](https://github.com/seaweedfs/seaweedfs/pull/7873) (2025-12-25). It is the S3-side counterpart of the filer fix in [#11243](https://github.com/seaweedfs/seaweedfs/issues/11243) / [#11246](https://github.com/seaweedfs/seaweedfs/pull/11246). No issue questions the AWS divergence (searched 2026-10-20).
 
-Draft:
+**Not a security issue.** Their [SECURITY.md](https://github.com/seaweedfs/seaweedfs/blob/master/SECURITY.md) sends findings that cross no trust boundary to the normal tracker. I tested an identity limited to `Write:repro/allowed/*`:
+- Permission checks use the normalized key, so writing `other\x.txt` gives 403.
+- `IsValidObjectKey` rejects `..` after normalization, so `allowed/..\secret.txt` and similar give 400.
+- Data outside the prefix was untouched.
 
-> **S3 ListObjectsV2 reports a backslash in a key as "/" (4.48)**
+**Effect here:** rclone's `FsEncoding/punctuation` case fails when RSilo stores files on SeaweedFS (RSilo's CI S3 server). On R2, which RSilo uses in production, and on AWS-compatible B2, it passes. There is no workaround in RSilo or the backend.
+
+**Filing:** a public issue at github.com/seaweedfs/seaweedfs, using their bug template (`.github/ISSUE_TEMPLATE.md`: describe the bug, system setup with the exact `weed` command line, OS, `weed version`, expected behavior). Questions go to Discussions, but this is a behaviour report. Their good-example issue is #1005. Because the behaviour is intentional, the ask is an opt-out (e.g. a flag), not a revert.
+
+Draft (their template):
+
+> **S3 API: backslashes in object keys are converted to "/" (and "//" collapsed), so distinct AWS keys alias the same object**
 >
-> With the S3 gateway (`weed server -s3`, 4.48, Linux), an object whose key contains `\` is stored and readable under its exact key, but ListObjectsV2 lists it with `/` in place of `\`:
+> **Describe the bug**
+> `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`) rewrites every S3 object key: `\` becomes `/` and duplicate slashes are collapsed. On AWS S3 (and R2, B2, MinIO) both are ordinary key characters, so keys that are distinct there alias one object here:
 >
-> ```sh
-> aws --endpoint-url http://localhost:8333 s3 cp f.txt 's3://b/probe/back\slash.txt'
-> aws --endpoint-url http://localhost:8333 s3api head-object --bucket b --key 'probe/back\slash.txt'   # 200
-> aws --endpoint-url http://localhost:8333 s3api list-objects-v2 --bucket b --prefix probe/          # Key: probe/back/slash.txt
+> ```
+> $ aws s3api put-object --bucket repro --key 'probe/back\slash.txt' --body f.txt     # "hello"
+> $ aws s3api list-objects-v2 --bucket repro --prefix probe/ --query 'Contents[].Key'
+> ["probe/back/slash.txt"]
+> $ aws s3api list-objects-v2 --bucket repro --prefix probe/ --delimiter /
+> CommonPrefixes: ["probe/back/"], Contents: none
+> $ aws s3api put-object --bucket repro --key 'probe/back/slash.txt' --body g.txt     # "other"
+> $ aws s3api get-object --bucket repro --key 'probe/back\slash.txt' out.txt && cat out.txt
+> other
+> $ aws s3api delete-object --bucket repro --key 'probe/back\slash.txt'               # removes probe/back/slash.txt
 > ```
 >
-> AWS S3 and Cloudflare R2 keep `\` as an ordinary key character, so a client that lists and then fetches by the listed key gets a 404, or sees a phantom folder `back/`. This looks like the S3 counterpart of #11243/#11246, where the filer path code treated `\` as a separator.
-
-The commands in the draft show the shape of the reproduction. The observed result came from RSilo's S3 adapter (SigV4 `PUT`/`HEAD`/`ListObjectsV2`) against `chrislusf/seaweedfs:4.48`. Re-run them with the aws CLI before filing.
+> (All commands use `--endpoint-url http://localhost:8333` and path-style addressing. A raw `%5C` sent with curl `--aws-sigv4` behaves the same.)
+>
+> Clients that sync arbitrary file names, such as rclone, or that store user-chosen names, such as remoteStorage servers, can't round-trip a name containing `\` or `//`. Writing one can silently overwrite a different object.
+>
+> **System Setup**
+> - `docker run -p 8333:8333 -v $PWD:/cfg:ro chrislusf/seaweedfs:4.48 server -s3 -s3.config=/cfg/s3.json` (default filer, no `filer.toml`)
+> - Linux 6.18 (NixOS), podman
+> - `weed version`: `30GB 4.48 530be3e37 linux amd64`
+>
+> **Expected behavior**
+> As on AWS S3: `probe/back\slash.txt` and `probe/back/slash.txt` are two objects, and keys are listed exactly as written.
+>
+> I understand the conversion is deliberate (Windows compatibility, #7873) and that `IsValidObjectKey` relies on it to block `..` traversal. Could there be an option to keep keys verbatim for AWS compatibility, e.g. a flag on `weed s3`/`weed server -s3`? If the filer can't store `\` in a name, then at least documenting the divergence would help.
+>
+> **Additional context**
+> Related: #11243 / #11246 (the filer-path side). Found while testing a remoteStorage server's S3 backend with rclone's integration suite.
