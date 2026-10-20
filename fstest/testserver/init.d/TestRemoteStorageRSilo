@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Self-starting RSilo (offline mode: SQLite + a local directory) for
+# TestRemoteStorageRSilo:, in rclone's fstest/testserver/init.d convention.
+#
+#   RSILO_SRC   an RSilo checkout to run (e.g. a branch under development);
+#               default: a clone of $RSILO_REPO at $RSILO_REF in ~/.cache
+#   RSILO_REF   git ref for the default clone (default: main)
+#   RSILO_PORT  port to listen on (default: 18002)
+set -euo pipefail
+REPO=${RSILO_REPO:-https://github.com/jonocodes/RSilo}
+REF=${RSILO_REF:-main}
+PORT=${RSILO_PORT:-18002}
+STATE=${TMPDIR:-/tmp}/rclone-rs-rsilo-$PORT
+
+source_dir() {
+  if [ -n "${RSILO_SRC:-}" ]; then echo "$RSILO_SRC"; return; fi
+  local dir=${XDG_CACHE_HOME:-$HOME/.cache}/rclone-remotestorage/rsilo
+  if [ ! -d "$dir/.git" ]; then
+    git clone -q "$REPO" "$dir" >&2
+  fi
+  git -C "$dir" fetch -q origin "$REF" >&2
+  git -C "$dir" checkout -q --detach FETCH_HEAD >&2
+  echo "$dir"
+}
+
+stop() {
+  if [ -f "$STATE/pid" ]; then kill "$(cat "$STATE/pid")" 2>/dev/null || true; fi
+  rm -rf "$STATE"
+}
+
+case ${1:-} in
+start)
+  stop
+  SRC=$(source_dir)
+  [ -d "$SRC/node_modules" ] || (cd "$SRC" && bun install --frozen-lockfile >&2)
+  mkdir -p "$STATE"
+  cd "$SRC"
+  STORAGE_DIR="$STATE/storage" DB_PATH="$STATE/db.sqlite" PORT=$PORT \
+    nohup bun src/server-offline.ts </dev/null >"$STATE/server.log" 2>&1 &
+  echo $! >"$STATE/pid"
+  for _ in $(seq 60); do curl -sf -o /dev/null "http://localhost:$PORT/health" && break; sleep 0.5; done
+  curl -sf -o /dev/null "http://localhost:$PORT/health" || { cat "$STATE/server.log" >&2; exit 1; }
+  TOKEN=$(DB_PATH="$STATE/db.sqlite" bun src/scripts/dev-token.ts alice '*:rw' </dev/null 2>/dev/null | tail -1)
+  echo "type=remotestorage"
+  echo "storage_root=http://localhost:$PORT/storage/alice"
+  echo "token=$TOKEN"
+  echo "_connect=127.0.0.1:$PORT"
+  ;;
+stop) stop ;;
+status) [ -f "$STATE/pid" ] && kill -0 "$(cat "$STATE/pid")" 2>/dev/null && echo running || echo stopped ;;
+*) echo "usage: $0 start|stop|status" >&2; exit 2 ;;
+esac

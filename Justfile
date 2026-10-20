@@ -2,6 +2,11 @@
 # activation sets the same path; tests use a fresh throwaway config instead.
 export RCLONE_CONFIG := env("RCLONE_CONFIG", justfile_directory() / "rclone.conf")
 
+# RSilo test server (fstest/testserver/init.d/TestRemoteStorageRSilo) is cloned at
+# this ref. Switch back to "main" once jonocodes/RSilo#41 is merged. Set
+# RSILO_SRC=<checkout> to test a local RSilo instead.
+export RSILO_REF := env("RSILO_REF", "fix/rclone-compat")
+
 # List recipes
 default:
     @just --list
@@ -14,7 +19,7 @@ build:
 test:
     RCLONE_CONFIG=$(mktemp -d)/rclone.conf go test ./backend/remotestorage/ -run 'Test[^I]'
 
-# rclone's fstests integration suite against a throwaway armadietto container
+# rclone's fstests suite against throwaway armadietto (docker) and RSilo (offline) servers
 test-integration *args:
     RCLONE_CONFIG=$(mktemp -d)/rclone.conf go test ./backend/remotestorage/ -run TestIntegration -timeout 30m {{args}}
 

@@ -37,18 +37,25 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-The environment comes from [flox](https://flox.dev) (Go, just, `CGO_ENABLED=0`). It also points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. The Justfile uses the same file, and test recipes each use a fresh throwaway config. Plain `go test` outside flox would fall back to the global config, so prefer the `just` recipes. Docker or podman is needed for the test server.
+The environment comes from [flox](https://flox.dev) (Go, just, bun, `CGO_ENABLED=0`). It also points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. The Justfile uses the same file, and test recipes each use a fresh throwaway config. Plain `go test` outside flox would fall back to the global config, so prefer the `just` recipes. Docker or podman is needed for the armadietto test server.
 
 ```sh
 flox activate
 just                    # list recipes
 just test               # unit tests against an in-process fake server
-just test-integration   # rclone's fstests suite; starts/stops armadietto in docker itself
+just test-integration   # rclone's fstests suite against armadietto and RSilo; starts/stops both itself
 just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
-`fstest/testserver/init.d/TestRemoteStorage` follows rclone's convention for self-starting test servers, so the integration suite manages the container on its own.
+The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`):
+
+| Remote | Server | Covers |
+|---|---|---|
+| `TestRemoteStorage:` | armadietto (classic) in Docker | old-style server: draft -10, no Last-Modified, no Range, its listing-name quirks (`vendor = armadietto`) |
+| `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline mode (bun + SQLite + a local directory) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
+
+RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF`. The Justfile sets it to the branch of jonocodes/RSilo#41 until that PR merges. Set `RSILO_SRC=<path>` to run a local RSilo checkout instead, for example while changing RSilo. Setting `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` makes that RSilo store its files in S3, e.g. a local SeaweedFS.
 
 ## Docs
 

@@ -77,3 +77,15 @@ Draft:
 **Status:** not filed, and possibly not worth filing. **Workaround:** `NewFs` treats 401 or 403 from its root-is-a-file probe as "not a file", and the 401 error message mentions scope.
 
 With a `rclone-test:rw` token, `HEAD /<user>/rclone-test` (a document outside the category) and `GET /<user>/documents/` both return 401. The spec (§5) lists 403 for "access to the requested path is not allowed with this token" and 401 for a missing or invalid token. 5apps' storage server isn't public, so the only place to report this would be 5apps support.
+
+## RSilo
+
+Running fstests against RSilo's offline server found problems with item names, missing Range support, and fidelity problems in the offline store. All were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (2026-10-19), and the backend needs no workarounds for RSilo. Once #41 merges, set `RSILO_REF` in the Justfile back to `main`.
+
+## SeaweedFS
+
+### Backslash in an S3 key is listed as "/"
+
+**Status:** not filed. **Seen with:** `chrislusf/seaweedfs:4.48` (RSilo's CI S3 server), running RSilo with S3 storage.
+
+An object stored under `probe/back\slash.txt` (sent as `%5C`) can be read back with HEAD under that exact key, but ListObjectsV2 reports it as `probe/back/slash.txt`. R2 and AWS S3 keep `\` literally. The effect is that rclone's `FsEncoding/punctuation` case fails when RSilo runs on SeaweedFS, but not on its local store. There is no workaround in RSilo or in the backend, since it's a server listing bug.
