@@ -101,7 +101,7 @@ AWS S3 and R2 treat `\` and `//` as ordinary key characters. This is deliberate:
 - `IsValidObjectKey` rejects `..` after normalization, so `allowed/..\secret.txt` and similar give 400.
 - Data outside the prefix was untouched.
 
-**Effect here:** rclone's `FsEncoding/punctuation` case fails when RSilo stores files on SeaweedFS (RSilo's CI S3 server). On R2, which RSilo uses in production, and on AWS-compatible B2, it passes. There is no workaround in RSilo or the backend.
+**Effect here:** rclone's `FsEncoding/punctuation` case fails when RSilo stores files on SeaweedFS (RSilo's CI S3 server). On R2, which RSilo uses in production, it is not an issue (B2 is untested). There is no workaround in RSilo or the backend.
 
 **Filing:** a public issue at github.com/seaweedfs/seaweedfs, using their bug template (`.github/ISSUE_TEMPLATE.md`: describe the bug, system setup with the exact `weed` command line, OS, `weed version`, expected behavior). Questions go to Discussions, but this is a behaviour report. Their good-example issue is #1005. Because the behaviour is intentional, the ask is an opt-out (e.g. a flag), not a revert.
 
@@ -110,7 +110,7 @@ Draft (their template):
 > **S3 API: backslashes in object keys are converted to "/" (and "//" collapsed), so distinct AWS keys alias the same object**
 >
 > **Describe the bug**
-> `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`) rewrites every S3 object key: `\` becomes `/` and duplicate slashes are collapsed. On AWS S3 (and R2, B2, MinIO) both are ordinary key characters, so keys that are distinct there alias one object here:
+> `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`) rewrites every S3 object key: `\` becomes `/` and duplicate slashes are collapsed. On AWS S3 both are ordinary key characters, so keys that are distinct there alias one object here:
 >
 > ```
 > $ aws s3api put-object --bucket repro --key 'probe/back\slash.txt' --body f.txt     # "hello"
