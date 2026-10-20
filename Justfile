@@ -22,6 +22,10 @@ server:
 server-stop:
     ./test/armadietto.sh stop
 
+# End-to-end browser login (rclone config create) against armadietto
+test-login: build
+    ./test/login-e2e.sh
+
 # Spike: loopback implicit-grant token capture, end to end against armadietto (docker)
 spike-loopback:
     ./spike/loopback/armadietto.sh

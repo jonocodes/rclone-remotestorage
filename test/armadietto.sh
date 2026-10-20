@@ -33,6 +33,7 @@ start)
   echo "export RCLONE_CONFIG_TESTREMOTESTORAGE_STORAGE_ROOT=$BASE/storage/$USER_"
   echo "export RCLONE_CONFIG_TESTREMOTESTORAGE_TOKEN=$TOKEN"
   echo "export RCLONE_CONFIG_TESTREMOTESTORAGE_VENDOR=armadietto"
+  echo "export ARMADIETTO_USER=$USER_ ARMADIETTO_PASS=$PASS ARMADIETTO_BASE=$BASE"
   ;;
 stop)
   docker rm -f "$NAME" >/dev/null 2>&1 || true

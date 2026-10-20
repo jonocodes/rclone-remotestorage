@@ -14,7 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -31,6 +31,7 @@ import (
 	"github.com/rclone/rclone/fs/fserrors"
 	"github.com/rclone/rclone/fs/fshttp"
 	"github.com/rclone/rclone/fs/hash"
+	fslog "github.com/rclone/rclone/fs/log"
 	"github.com/rclone/rclone/lib/encoder"
 	"github.com/rclone/rclone/lib/pacer"
 	"github.com/rclone/rclone/lib/readers"
@@ -48,27 +49,46 @@ func init() {
 	// Out of tree there is no embedded docs/data/backends/remotestorage.yaml,
 	// so fs.Register logs "no overview data found" on every run. Mute it.
 	// Drop this once the backend lives in rclone itself.
-	defer log.SetOutput(log.Writer())
-	log.SetOutput(io.Discard)
+	fs.SetLogger(slog.NewTextHandler(io.Discard, nil))
+	defer fs.SetLogger(fslog.Handler)
 	fs.Register(&fs.RegInfo{
 		Name:        "remotestorage",
 		Description: "remoteStorage (remotestorage.io)",
 		NewFs:       NewFs,
+		Config:      Config,
 		Options: []fs.Option{{
+			Name: "user_address",
+			Help: `Your remoteStorage address, like alice@5apps.com.
+
+rclone looks the account up with WebFinger and logs in with your web
+browser. Leave blank to enter the storage root and a token by hand.`,
+			Sensitive: true,
+		}, {
+			Name: "scope",
+			Help: `OAuth scope to ask for when logging in.
+
+"*:rw" gives access to the whole storage. A category scope such as
+"documents:rw" limits rclone to documents/ (and public/documents/).`,
+			Default:  "*:rw",
+			Advanced: true,
+		}, {
 			Name: "storage_root",
 			Help: `Storage root URL of the account.
 
-This is the "href" of the remoteStorage link in the server's WebFinger
-response, e.g. https://storage.5apps.com/alice or
-https://example.com/storage/alice.`,
-			Required: true,
+Found with WebFinger when logging in. This is the "href" of the
+remoteStorage link in the server's WebFinger response, e.g.
+https://storage.5apps.com/alice or https://example.com/storage/alice.`,
+			Advanced: true,
+		}, {
+			Name:     "auth_url",
+			Help:     "OAuth authorization endpoint, found with WebFinger when logging in.",
+			Advanced: true,
 		}, {
 			Name: "token",
 			Help: `OAuth bearer token for the account.
 
-Its scope decides what the remote can reach: a "*:rw" token can use the
-whole storage, a "documents:rw" token only paths under documents/.`,
-			Required:  true,
+Set by logging in. Its scope decides what the remote can reach.`,
+			Advanced:  true,
 			Sensitive: true,
 		}, {
 			Name: "conditional_writes",
@@ -106,7 +126,10 @@ losing the app's write.`,
 
 // Options defines the configuration for this backend
 type Options struct {
+	UserAddress       string               `config:"user_address"`
+	Scope             string               `config:"scope"`
 	StorageRoot       string               `config:"storage_root"`
+	AuthURL           string               `config:"auth_url"`
 	Token             string               `config:"token"`
 	ConditionalWrites bool                 `config:"conditional_writes"`
 	Vendor            string               `config:"vendor"`
@@ -352,6 +375,9 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 	opt := new(Options)
 	if err := configstruct.Set(m, opt); err != nil {
 		return nil, err
+	}
+	if opt.StorageRoot == "" || opt.Token == "" {
+		return nil, errors.New("remote is not logged in (no storage_root or token): run \"rclone config reconnect " + name + ":\"")
 	}
 	u, err := url.Parse(opt.StorageRoot)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {

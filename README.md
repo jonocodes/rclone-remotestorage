@@ -2,7 +2,7 @@
 
 A generic [rclone](https://rclone.org) backend for the [remoteStorage](https://remotestorage.io) protocol ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/)). It should work with any compliant server: 5apps, armadietto, php-remote-storage, mysteryshack, RSilo, and others. The end goal is `rclone mount` of a remoteStorage account as a local drive.
 
-Status: early. Read, write, list, delete and `rclone mount` work with a pasted token. rclone's fstests integration suite passes against armadietto. Login from `rclone config` (WebFinger plus a browser) is not built yet.
+Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto, and login is tested end to end there. The same loopback flow (from the spike) was confirmed by hand against 5apps.
 
 ## How it is built
 
@@ -12,14 +12,16 @@ This is an out-of-tree backend. `backend/remotestorage` is an ordinary rclone ba
 
 ```sh
 just build
-./rclone-remotestorage config create myrs remotestorage \
-    storage_root=https://example.com/storage/alice token=<bearer token>
+./rclone-remotestorage config create myrs remotestorage user_address=alice@5apps.com
 ./rclone-remotestorage lsf myrs:
 ./rclone-remotestorage copy ./notes myrs:documents/notes
 ```
 
-- `storage_root` is the `href` of the remoteStorage link in the server's WebFinger response (`https://<host>/.well-known/webfinger?resource=acct:<user>@<host>`).
-- `token` is an OAuth bearer token. Its scope (`*:rw`, `documents:rw`, …) limits which paths the remote can reach.
+Logging in looks the account up with WebFinger, opens your browser on the server's consent page, and captures the token on a local listener (`http://127.0.0.1:53682`). Interactive `rclone config` asks the same questions. Re-run the login with `rclone config reconnect myrs:`, for example when a token expires.
+
+- **Narrower access:** set `scope` (advanced, default `*:rw`) to a category such as `documents:rw` to limit the remote to that folder. This is a good idea for a first try on an account holding live app data.
+- **No browser on this machine:** answer "n" to "Use web browser…". rclone prints an `rclone authorize "remotestorage" "…"` command to run on a machine that has a browser and this build; paste its output back. You can also paste a bearer token directly.
+- **By hand:** leave `user_address` blank and give `storage_root` (the `href` of the remoteStorage link in the server's WebFinger response) and `token`. Example: `config create myrs remotestorage storage_root=https://example.com/storage/alice token=<bearer token>`.
 
 ### What to expect
 
@@ -42,6 +44,7 @@ flox activate
 just                    # list recipes
 just test               # unit tests against an in-process fake server
 just test-integration   # rclone's fstests suite; starts/stops armadietto in docker itself
+just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
