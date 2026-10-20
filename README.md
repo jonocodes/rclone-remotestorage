@@ -54,6 +54,7 @@ eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
+- [Upstream issues to file](docs/upstream-issues.md): server bugs the backend works around, with draft issue text. Not filed yet.
 
 ## Mounting
 
