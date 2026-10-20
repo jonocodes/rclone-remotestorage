@@ -61,7 +61,7 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF`. The J
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
-- [Upstream issues to file](docs/upstream-issues.md): server bugs the backend works around, with draft issue text. Not filed yet.
+- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, and their status. armadietto [#173](https://github.com/remotestorage/armadietto/issues/173) and [#174](https://github.com/remotestorage/armadietto/issues/174) are filed; RSilo is fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
 
 ## Mounting
 

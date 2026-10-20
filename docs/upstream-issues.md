@@ -4,7 +4,9 @@ These are server bugs this backend works around. Each one has a draft issue read
 
 ## armadietto
 
-Checked against `remotestorage/armadietto` at `3251697` (2026-10-14), using the classic/monolithic server, Docker image `remotestorage/armadietto-monolithic:latest`. ### Prior reports (searched 2026-10-19)
+Checked against `remotestorage/armadietto` at `3251697` (2026-10-14), using the classic/monolithic server, Docker image `remotestorage/armadietto-monolithic:latest`.
+
+### Prior reports (searched 2026-10-19)
 
 Neither bug has been reported or discussed anywhere we could find:
 
