@@ -88,7 +88,7 @@ Running fstests against RSilo's offline server found problems with item names, m
 
 ### S3 keys: "\" is turned into "/" (and "//" collapsed), so distinct keys alias
 
-**Status:** not filed. Verified 2026-10-20 against `chrislusf/seaweedfs:4.48` (`weed version`: `30GB 4.48 530be3e37 linux amd64`), using the aws CLI 2.34 and curl's SigV4 directly, with no RSilo code involved.
+**Status:** filed 2026-10-21 as [seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908). Verified 2026-10-20 against `chrislusf/seaweedfs:4.48` (`weed version`: `30GB 4.48 530be3e37 linux amd64`), using the aws CLI 2.34 and curl's SigV4 directly, with no RSilo code involved.
 
 **What happens:** `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`, around L255 at 4.48) runs on every S3 object key. It replaces `\` with `/` "for cross-platform compatibility" and collapses duplicate slashes. As a result:
 - `a\b` and `a/b` are the same object for PUT, GET, HEAD and DELETE.
@@ -105,38 +105,4 @@ AWS S3 and R2 treat `\` and `//` as ordinary key characters. This is deliberate:
 
 **Filing:** a public issue at github.com/seaweedfs/seaweedfs, using their bug template (`.github/ISSUE_TEMPLATE.md`: describe the bug, system setup with the exact `weed` command line, OS, `weed version`, expected behavior). Questions go to Discussions, but this is a behaviour report. Their good-example issue is #1005. Because the behaviour is intentional, the ask is an opt-out (e.g. a flag), not a revert.
 
-Draft (their template):
-
-> **S3 API: backslashes in object keys are converted to "/" (and "//" collapsed), so distinct AWS keys alias the same object**
->
-> **Describe the bug**
-> `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`) rewrites every S3 object key: `\` becomes `/` and duplicate slashes are collapsed. On AWS S3 both are ordinary key characters, so keys that are distinct there alias one object here:
->
-> ```
-> $ aws s3api put-object --bucket repro --key 'probe/back\slash.txt' --body f.txt     # "hello"
-> $ aws s3api list-objects-v2 --bucket repro --prefix probe/ --query 'Contents[].Key'
-> ["probe/back/slash.txt"]
-> $ aws s3api list-objects-v2 --bucket repro --prefix probe/ --delimiter /
-> CommonPrefixes: ["probe/back/"], Contents: none
-> $ aws s3api put-object --bucket repro --key 'probe/back/slash.txt' --body g.txt     # "other"
-> $ aws s3api get-object --bucket repro --key 'probe/back\slash.txt' out.txt && cat out.txt
-> other
-> $ aws s3api delete-object --bucket repro --key 'probe/back\slash.txt'               # removes probe/back/slash.txt
-> ```
->
-> (All commands use `--endpoint-url http://localhost:8333` and path-style addressing. A raw `%5C` sent with curl `--aws-sigv4` behaves the same.)
->
-> Clients that sync arbitrary file names, such as rclone, or that store user-chosen names, such as remoteStorage servers, can't round-trip a name containing `\` or `//`. Writing one can silently overwrite a different object.
->
-> **System Setup**
-> - `docker run -p 8333:8333 -v $PWD:/cfg:ro chrislusf/seaweedfs:4.48 server -s3 -s3.config=/cfg/s3.json` (default filer, no `filer.toml`)
-> - Linux 6.18 (NixOS), podman
-> - `weed version`: `30GB 4.48 530be3e37 linux amd64`
->
-> **Expected behavior**
-> As on AWS S3: `probe/back\slash.txt` and `probe/back/slash.txt` are two objects, and keys are listed exactly as written.
->
-> I understand the conversion is deliberate (Windows compatibility, #7873) and that `IsValidObjectKey` relies on it to block `..` traversal. Could there be an option to keep keys verbatim for AWS compatibility, e.g. a flag on `weed s3`/`weed server -s3`? If the filer can't store `\` in a name, then at least documenting the divergence would help.
->
-> **Additional context**
-> Related: #11243 / #11246 (the filer-path side). Found while testing a remoteStorage server's S3 backend with rclone's integration suite.
+The filed text is in #11908. It follows their template and uses the literal aws CLI output from the verification run (port 8334).
