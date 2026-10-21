@@ -46,3 +46,9 @@ spike-loopback:
 # Spike against a real server: prints an auth URL to open in your browser
 spike-loopback-live address:
     go run ./spike/loopback -address {{address}}
+
+# State of the upstream tickets listed under "Waiting on upstream" in the README
+upstream-status:
+    @grep -oE '\[[a-z0-9_.-]+/[a-zA-Z0-9_.-]+#[0-9]+\]' README.md | tr -d '[]' | sort -u | while IFS='#' read -r repo n; do \
+      gh api "repos/$repo/issues/$n" --jq "\"$repo#$n  \(.state)  comments=\(.comments)  updated=\(.updated_at[:10])  \(.title)\""; \
+    done

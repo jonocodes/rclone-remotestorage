@@ -61,7 +61,18 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (defau
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
-- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, and their status. armadietto [#173](https://github.com/remotestorage/armadietto/issues/173) and [#174](https://github.com/remotestorage/armadietto/issues/174) are filed; RSilo was fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20).
+- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros and draft text.
+
+## Waiting on upstream
+
+Tickets we've filed and are waiting on. `just upstream-status` shows their current state. When one is fixed, drop the workaround and record the fixed version in [docs/upstream-issues.md](docs/upstream-issues.md).
+
+| Ticket | Filed | What it is | Remove when fixed |
+|---|---|---|---|
+| [remotestorage/armadietto#173](https://github.com/remotestorage/armadietto/issues/173) | 2026-10-19 | Classic server's folder listings return percent-encoded item names | name decoding under `vendor = armadietto` (`armadiettoName`) |
+| [remotestorage/armadietto#174](https://github.com/remotestorage/armadietto/issues/174) | 2026-10-19 | Classic server's HEAD omits Content-Length | `vendor = armadietto` skipping HEAD for metadata |
+
+Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). Not filed yet: SeaweedFS turning `\` into `/` in S3 keys (draft ready), and 5apps answering 401 instead of 403 (probably not worth filing).
 
 ## Mounting
 
