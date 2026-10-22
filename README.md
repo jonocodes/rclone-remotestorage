@@ -37,10 +37,9 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-The environment comes from [flox](https://flox.dev) (Go, just, bun, `CGO_ENABLED=0`). It also points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. The Justfile uses the same file, and test recipes each use a fresh throwaway config. Plain `go test` outside flox would fall back to the global config, so prefer the `just` recipes. Docker or podman is needed for the armadietto test server.
+You need Go, [just](https://just.systems) and [bun](https://bun.sh), plus Docker or podman for the armadietto test server. The Justfile sets `CGO_ENABLED=0` and points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
 
 ```sh
-flox activate
 just                    # list recipes
 just test               # unit tests against an in-process fake server
 just test-integration   # rclone's fstests suite against armadietto and RSilo; starts/stops both itself
@@ -92,3 +91,7 @@ just test-remote rs5:rclone-test
 ```
 
 It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-10-19): 86 passed, 0 failed, in 75s.
+
+## License
+
+[GPL-3.0](LICENSE).

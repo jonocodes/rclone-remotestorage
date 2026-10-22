@@ -1,6 +1,7 @@
-# rclone config for this project, never ~/.config/rclone/rclone.conf. flox
-# activation sets the same path; tests use a fresh throwaway config instead.
+# rclone config for this project, never ~/.config/rclone/rclone.conf. Tests use
+# a fresh throwaway config instead.
 export RCLONE_CONFIG := env("RCLONE_CONFIG", justfile_directory() / "rclone.conf")
+export CGO_ENABLED := env("CGO_ENABLED", "0")
 
 # RSilo test server (fstest/testserver/init.d/TestRemoteStorageRSilo) is cloned at
 # this ref. Set RSILO_SRC=<checkout> to test a local RSilo instead.

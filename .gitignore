@@ -1,3 +1,4 @@
 /rclone-remotestorage
 *.test
 rclone.conf
+.flox/
