@@ -88,7 +88,7 @@ Running fstests against RSilo's offline server found problems with item names, m
 
 ### S3 keys: "\" is turned into "/" (and "//" collapsed), so distinct keys alias
 
-**Status:** filed 2026-10-21 as [seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908). Verified 2026-10-20 against `chrislusf/seaweedfs:4.48` (`weed version`: `30GB 4.48 530be3e37 linux amd64`), using the aws CLI 2.34 and curl's SigV4 directly, with no RSilo code involved.
+**Status:** fixed upstream, but no release has it yet. Filed 2026-10-21 as [seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908). The fix, [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), was merged 2026-10-22 (`c0152e6`). It adds an opt-in `-s3.allowBackslashInKey` flag (on `weed s3`, `weed server -s3`, `weed filer -s3` and `weed mini`) that keeps `\` a literal key character. Without the flag the old behaviour stays, and `//` is still collapsed even with it. The newest release, 4.48, predates the fix. Once a release includes it, RSilo's CI should add the flag. Verified 2026-10-20 against `chrislusf/seaweedfs:4.48` (`weed version`: `30GB 4.48 530be3e37 linux amd64`), using the aws CLI 2.34 and curl's SigV4 directly, with no RSilo code involved.
 
 **What happens:** `NormalizeObjectKey` (`weed/s3api/s3_constants/header.go`, around L255 at 4.48) runs on every S3 object key. It replaces `\` with `/` "for cross-platform compatibility" and collapses duplicate slashes. As a result:
 - `a\b` and `a/b` are the same object for PUT, GET, HEAD and DELETE.

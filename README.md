@@ -71,7 +71,7 @@ Tickets we've filed and are waiting on. `just upstream-status` shows their curre
 | [remotestorage/armadietto#173](https://github.com/remotestorage/armadietto/issues/173) | 2026-10-19 | Classic server's folder listings return percent-encoded item names | name decoding under `vendor = armadietto` (`armadiettoName`) |
 | [remotestorage/armadietto#174](https://github.com/remotestorage/armadietto/issues/174) | 2026-10-19 | Classic server's HEAD omits Content-Length | `vendor = armadietto` skipping HEAD for metadata |
 
-Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). Not filed yet: SeaweedFS turning `\` into `/` in S3 keys (draft ready), and 5apps answering 401 instead of 403 (probably not worth filing).
+Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). SeaweedFS turning `\` into `/` in S3 keys ([seaweedfs/seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908)) was fixed by the opt-in `-s3.allowBackslashInKey` flag in [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), merged 2026-10-22. No release has it yet (4.48 predates it), and once one does, RSilo's CI should add the flag. Not filed: 5apps answering 401 instead of 403 (probably not worth filing).
 
 ## Mounting
 
