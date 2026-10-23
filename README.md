@@ -60,7 +60,7 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (defau
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
-- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908). RSilo was fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
+- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908) (fixed in 4.49 behind `-s3.allowBackslashInKey`). RSilo was fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
 
 ## Waiting on upstream
 
@@ -71,7 +71,7 @@ Tickets we've filed and are waiting on. `just upstream-status` shows their curre
 | [remotestorage/armadietto#173](https://github.com/remotestorage/armadietto/issues/173) | 2026-10-19 | Classic server's folder listings return percent-encoded item names | name decoding under `vendor = armadietto` (`armadiettoName`) |
 | [remotestorage/armadietto#174](https://github.com/remotestorage/armadietto/issues/174) | 2026-10-19 | Classic server's HEAD omits Content-Length | `vendor = armadietto` skipping HEAD for metadata |
 
-Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). SeaweedFS turning `\` into `/` in S3 keys ([seaweedfs/seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908)) was fixed by the opt-in `-s3.allowBackslashInKey` flag in [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), merged 2026-10-22. No release has it yet (4.48 predates it), and once one does, RSilo's CI should add the flag. Not filed: 5apps answering 401 instead of 403 (probably not worth filing).
+Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). SeaweedFS turning `\` into `/` in S3 keys ([seaweedfs/seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908)) was fixed by the opt-in `-s3.allowBackslashInKey` flag in [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), merged 2026-10-22. It shipped in 4.49 (2026-10-23). Once the 4.49 Docker image is published, RSilo's CI should move to it and add the flag. Not filed: 5apps answering 401 instead of 403 (probably not worth filing).
 
 ## Mounting
 
