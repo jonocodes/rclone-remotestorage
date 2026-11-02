@@ -86,6 +86,8 @@ Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](ht
 
 Edits made by remoteStorage apps show up once the directory cache expires (`--dir-cache-time`). Change polling via the root folder's ETag is planned. Renames of files and folders work, including programs that save to a temp file and rename it over the original.
 
+**macOS:** `just build` sets `CGO_ENABLED=0`, and without cgo rclone has no `mount` on macOS. Use `nfsmount` instead, which uses the built-in NFS client and needs no macFUSE: `./rclone-remotestorage nfsmount myrs: ~/rs --vfs-cache-mode writes --dir-cache-time 30s` (add `--sudo` if mounting needs root). Checked by hand against 5apps on 2026-11-02: upload, file and folder renames, a TextEdit save, an edit made in Inspektor showing up, and delete all worked. For `mount` itself, install macFUSE or FUSE-T and build with `CGO_ENABLED=1 go build -tags cmount -o rclone-remotestorage ./cmd/rclone`.
+
 Use `--vfs-cache-mode writes` rather than `full` for data apps also change. `full` keeps read data in a local cache and only notices a document changed if its size did, because the cache compares sizes, modtimes and hashes and this backend has no usable modtime or hash. So with `full`, an app's edit that keeps the size the same stays invisible until the cached copy is evicted. `writes` reads from the server on every open. Fixing `full` would need rclone's VFS to compare ETags.
 
 Conflict protection doesn't hold in a mount. A write that hits a conflict (412) is retried. Once the directory cache expires the mount picks up the app's new ETag, and the retry overwrites the app's change. The VFS doesn't track which version an edit was based on, so the backend can't prevent this.

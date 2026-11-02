@@ -55,7 +55,7 @@ Fields follow the Feature request form.
 >
 > - armadietto in Docker (an older server, draft -10)
 > - RSilo in offline mode (a modern server, draft -22: Last-Modified, Range)
-> - a real 5apps account (manual run)
+> - a real 5apps account (fstests, manual run), plus a manual `nfsmount` check on macOS: renames, editor saves, app edits showing up
 >
 > Both local servers have `fstest/testserver/init.d/` scripts built on `run.bash`, so they start themselves during tests. With the backend copied into rclone v1.75.2, `go run ./fstest/test_all -backends remotestorage` passes cleanly against both: backend, `fs/operations`, `fs/sync`, `cmd/bisync` and `vfs`. `cmd/gitannex` is skipped because it only accepts remotes from a config file, the same as for the other self-starting servers.
 >
