@@ -30,7 +30,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 | Checksums | none. ETags are opaque, so sync compares sizes. |
 | Modification times | can't be set. Shows the server's Last-Modified (upload time) if it sends one, else `--default-time`. |
 | Empty folders | can't exist. A folder appears when a document is written below it. |
-| Copy/move on the server | not in the protocol. The backend's Copy downloads and re-uploads, which is what lets `mount` rename files and folders. rclone reports it as a server-side copy in its stats. Move is Copy plus delete. |
+| Copy/move on the server | not in the protocol. rclone downloads and re-uploads (the backend's Copy declines with `ErrorCantCopy`, which is what lets `mount` rename files and folders). Move is a copy plus a delete. |
 | Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it. Overwriting a document keeps its existing type unless the source has a real one (not `application/octet-stream`). Editing an extensionless app document through `mount`, in place or by saving a temp file and renaming it over the original, keeps e.g. `application/json`. Other uploads get a type guessed from the file name. |
 | Concurrent app edits | overwrite and delete use `If-Match` (`conditional_writes`, on by default), so an app's newer write fails with a conflict instead of being lost. Creating a file doesn't check: rclone expects an upload to replace whatever is there (`rcat` relies on it), so a file an app just created is overwritten. In a mount, see below. |
 | `vendor = armadietto` | works around armadietto returning percent-encoded listing keys and HEAD responses without Content-Length. Names that literally contain `%XX` can't be told apart there. |
@@ -48,7 +48,7 @@ just test-mount         # rclone mount against armadietto: writes, renames, Cont
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
-The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`):
+The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`). Their scripts use rclone's `run.bash` and `docker.bash`, copied unchanged from rclone v1.75.2, which reference-count the servers so parallel test suites share them. `just server`, `test-login` and `test-mount` use a separate armadietto on port 18011.
 
 | Remote | Server | Covers |
 |---|---|---|
