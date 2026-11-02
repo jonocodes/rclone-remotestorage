@@ -30,9 +30,9 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 | Checksums | none. ETags are opaque, so sync compares sizes. |
 | Modification times | can't be set. Shows the server's Last-Modified (upload time) if it sends one, else `--default-time`. |
 | Empty folders | can't exist. A folder appears when a document is written below it. |
-| Copy/move on the server | not in the protocol. rclone downloads and re-uploads. |
-| Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it. Overwriting a document keeps its existing type unless the source has one, so editing an extensionless app document through `mount` doesn't turn it into `application/octet-stream`. New uploads get a type guessed from the file name. |
-| Concurrent app edits | overwrite and delete use `If-Match` (`conditional_writes`, on by default), so an app's newer write fails with a conflict instead of being lost |
+| Copy/move on the server | not in the protocol. The backend's Copy downloads and re-uploads, which is what lets `mount` rename files and folders. rclone reports it as a server-side copy in its stats. Move is Copy plus delete. |
+| Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it. Overwriting a document keeps its existing type unless the source has a real one (not `application/octet-stream`). Editing an extensionless app document through `mount`, in place or by saving a temp file and renaming it over the original, keeps e.g. `application/json`. Other uploads get a type guessed from the file name. |
+| Concurrent app edits | overwrite and delete use `If-Match` (`conditional_writes`, on by default), so an app's newer write fails with a conflict instead of being lost. Creating a file doesn't check: rclone expects an upload to replace whatever is there (`rcat` relies on it), so a file an app just created is overwritten. In a mount, see below. |
 | `vendor = armadietto` | works around armadietto returning percent-encoded listing keys and HEAD responses without Content-Length. Names that literally contain `%XX` can't be told apart there. |
 
 ## Development
@@ -77,17 +77,16 @@ Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](ht
 ## Mounting
 
 ```sh
-./rclone-remotestorage mount myrs: ~/rs --vfs-cache-mode full --dir-cache-time 30s
+./rclone-remotestorage mount myrs: ~/rs --vfs-cache-mode writes --dir-cache-time 30s
 ```
 
-Edits made by remoteStorage apps show up once the directory cache expires (`--dir-cache-time`). Change polling via the root folder's ETag is planned.
+Edits made by remoteStorage apps show up once the directory cache expires (`--dir-cache-time`). Change polling via the root folder's ETag is planned. Renames of files and folders work, including programs that save to a temp file and rename it over the original.
 
-Known problems, found by a manual run against armadietto (2026-11-02):
+Use `--vfs-cache-mode writes` rather than `full` for data apps also change. `full` keeps read data in a local cache and only notices a document changed if its size did, because the cache compares sizes, modtimes and hashes and this backend has no usable modtime or hash. So with `full`, an app's edit that keeps the size the same stays invisible until the cached copy is evicted. `writes` reads from the server on every open. Fixing `full` would need rclone's VFS to compare ETags.
 
-- **Renames fail** with an I/O error, for both files and folders. rclone's VFS refuses to rename without a server-side Move or Copy, and the protocol has neither. Programs that save to a temp file and rename it over the original fail too, leaving the temp file behind.
-- **A same-size change by an app isn't seen** if the file is already in the VFS cache. The cache compares only sizes, because there are no hashes and modtimes aren't used.
-- **Conflict protection doesn't hold in a mount.** A write that hits a conflict (412) is retried. Once the directory cache expires the mount picks up the new ETag, and the retry then overwrites the app's change.
-- **Creating a file the app just created overwrites it**, because new files are written without `If-None-Match: *`.
+Conflict protection doesn't hold in a mount. A write that hits a conflict (412) is retried. Once the directory cache expires the mount picks up the app's new ETag, and the retry overwrites the app's change. The VFS doesn't track which version an edit was based on, so the backend can't prevent this.
+
+These were found by manual runs against armadietto (2026-11-02).
 
 ## Testing against a real account
 

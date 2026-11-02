@@ -171,6 +171,8 @@ func TestUpdateKeepsContentType(t *testing.T) {
 	}{
 		{"guess from name", &fakeInfo{remote: "note", size: 3}, "application/json; charset=UTF-8"},
 		{"source has a type", &fakeMimeInfo{fakeInfo{remote: "note", size: 3}, "text/plain"}, "text/plain"},
+		// an editor's temp file renamed over the document got a guessed type
+		{"source type unknown", &fakeMimeInfo{fakeInfo{remote: "note", size: 3}, "application/octet-stream"}, "application/json; charset=UTF-8"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
@@ -186,6 +188,83 @@ func TestUpdateKeepsContentType(t *testing.T) {
 			o := &Object{fs: f, remote: "note", hasMetaData: true, size: 1, etag: "old", mimeType: "application/json; charset=UTF-8"}
 			require.NoError(t, o.Update(context.Background(), strings.NewReader("new"), tc.src))
 		})
+	}
+}
+
+// memDoc is a document held by memServer
+type memDoc struct{ body, contentType, etag string }
+
+// memServer is an in-memory storage root honouring If-Match on PUT
+func memServer(t *testing.T, docs map[string]*memDoc) http.HandlerFunc {
+	n := 0
+	return func(w http.ResponseWriter, r *http.Request) {
+		p := strings.TrimPrefix(r.URL.Path, "/storage/alice/")
+		d := docs[p]
+		switch r.Method {
+		case http.MethodGet, http.MethodHead:
+			if d == nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", d.contentType)
+			w.Header().Set("Content-Length", fmt.Sprint(len(d.body)))
+			w.Header().Set("ETag", `"`+d.etag+`"`)
+			if r.Method == http.MethodGet {
+				io.WriteString(w, d.body)
+			}
+		case http.MethodPut:
+			if m := r.Header.Get("If-Match"); m != "" && (d == nil || m != `"`+d.etag+`"`) {
+				w.WriteHeader(http.StatusPreconditionFailed)
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			n++
+			docs[p] = &memDoc{string(body), r.Header.Get("Content-Type"), fmt.Sprint("v", n)}
+			w.WriteHeader(http.StatusCreated)
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+	}
+}
+
+// The protocol has no copy, but rclone's VFS can't rename without one, so
+// Copy downloads and re-uploads, keeping the source's type
+func TestCopy(t *testing.T) {
+	ctx := context.Background()
+	docs := map[string]*memDoc{
+		"d/src":      {`{"n":1}`, "application/json", "s1"},
+		"d/existing": {"old", "text/plain", "e1"},
+	}
+	f := newTestFs(t, memServer(t, docs), nil)
+	src, err := f.NewObject(ctx, "d/src")
+	require.NoError(t, err)
+
+	for _, remote := range []string{"d/new", "d/existing"} {
+		dst, err := f.Copy(ctx, src, remote)
+		require.NoError(t, err, remote)
+		assert.Equal(t, remote, dst.Remote())
+		assert.Equal(t, int64(7), dst.Size())
+		require.Contains(t, docs, remote)
+		assert.Equal(t, `{"n":1}`, docs[remote].body, remote)
+		assert.Equal(t, "application/json", docs[remote].contentType, remote)
+	}
+	assert.Equal(t, `{"n":1}`, docs["d/src"].body, "source untouched")
+}
+
+// The VFS may upload a temp file renamed over a document as a new file (Put),
+// and the name alone says nothing about an extensionless app document's type
+func TestPutKeepsExistingContentType(t *testing.T) {
+	ctx := context.Background()
+	docs := map[string]*memDoc{"d/note": {`{"n":1}`, "application/json", "e1"}}
+	f := newTestFs(t, memServer(t, docs), nil)
+	for remote, want := range map[string]string{
+		"d/note":     "application/json",
+		"d/fresh":    "application/octet-stream",
+		"d/text.txt": "text/plain; charset=utf-8",
+	} {
+		_, err := f.Put(ctx, strings.NewReader("new"), &fakeInfo{remote: remote, size: 3})
+		require.NoError(t, err, remote)
+		assert.Equal(t, want, docs[remote].contentType, remote)
 	}
 }
 

@@ -541,6 +541,38 @@ func (f *Fs) Rmdir(ctx context.Context, dir string) error {
 	return nil
 }
 
+// Copy src to this remote by downloading and re-uploading it. The protocol
+// has no copy or move, but rclone's VFS can't rename files without one.
+//
+// This is stored with the remote path given.
+//
+// It returns the destination Object and a possible error.
+//
+// Will only be called if src.Fs().Name() == f.Name()
+//
+// If it isn't possible then return fs.ErrorCantCopy
+func (f *Fs) Copy(ctx context.Context, src fs.Object, remote string) (dst fs.Object, err error) {
+	srcObj, ok := src.(*Object)
+	if !ok {
+		fs.Debugf(src, "Can't copy - not same remote type")
+		return nil, fs.ErrorCantCopy
+	}
+	// An existing document is overwritten with If-Match, as Update does
+	o := &Object{fs: f, remote: remote}
+	if err := o.readMetaData(ctx); err != nil && !errors.Is(err, fs.ErrorObjectNotFound) {
+		return nil, err
+	}
+	in, err := srcObj.Open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer fs.CheckClose(in, &err)
+	if err := o.upload(ctx, in, srcObj); err != nil {
+		return nil, err
+	}
+	return o, nil
+}
+
 // ------------------------------------------------------------
 
 // Fs returns the parent Fs
@@ -723,19 +755,30 @@ func (o *Object) conditionalHeaders() map[string]string {
 	return map[string]string{"If-Match": `"` + o.etag + `"`}
 }
 
-// contentType is the type to upload src with: its own if it has one, else
-// the document's current type (apps rely on it, and the name is unchanged so
-// guessing from it can't do better), else a guess from the name
+// contentType is the type to upload src with: its own if it has a real one,
+// else the document's current type (apps rely on it, and the name is
+// unchanged so guessing from it can't do better), else a guess from the name.
+// application/octet-stream doesn't count as real: an editor's temp file
+// renamed over the document gets it as a guess.
 func (o *Object) contentType(ctx context.Context, src fs.ObjectInfo) string {
 	if do, ok := src.(fs.MimeTyper); ok {
-		if t := do.MimeType(ctx); t != "" {
+		if t := do.MimeType(ctx); t != "" && t != "application/octet-stream" {
 			return t
 		}
 	}
 	if o.mimeType != "" {
 		return o.mimeType
 	}
-	return fs.MimeTypeFromName(src.Remote())
+	t := fs.MimeTypeFromName(src.Remote())
+	if t == "application/octet-stream" && !o.hasMetaData {
+		// A Put may still land on a document, e.g. the VFS uploading a temp
+		// file it renamed over one, so look for a type to keep
+		existing := &Object{fs: o.fs, remote: o.remote}
+		if existing.readMetaData(ctx) == nil && existing.mimeType != "" {
+			return existing.mimeType
+		}
+	}
+	return t
 }
 
 func (o *Object) upload(ctx context.Context, in io.Reader, src fs.ObjectInfo, options ...fs.OpenOption) error {
@@ -787,6 +830,7 @@ func (o *Object) Remove(ctx context.Context) error {
 var (
 	_ fs.Fs          = (*Fs)(nil)
 	_ fs.PutStreamer = (*Fs)(nil)
+	_ fs.Copier      = (*Fs)(nil)
 	_ fs.Object      = (*Object)(nil)
 	_ fs.MimeTyper   = (*Object)(nil)
 	_ fs.IDer        = (*Object)(nil)
