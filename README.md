@@ -1,6 +1,6 @@
 # rclone-remotestorage
 
-A generic [rclone](https://rclone.org) backend for the [remoteStorage](https://remotestorage.io) protocol ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/)). It should work with any compliant server: 5apps, armadietto, php-remote-storage, mysteryshack, RSilo, and others. The end goal is `rclone mount` of a remoteStorage account as a local drive.
+A generic [rclone](https://rclone.org) backend for the [remoteStorage](https://remotestorage.io) protocol ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/)). It targets the servers maintained today: 5apps (hosted), armadietto and RSilo, all tested. Other spec-compliant servers should work but are untested. php-remote-storage and mysteryshack are no longer maintained and aren't targeted. The end goal is `rclone mount` of a remoteStorage account as a local drive.
 
 Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto (automated, docker) and against a real 5apps account (manual run, 2026-10-19). Login is tested end to end against armadietto and was used for real against 5apps.
 
@@ -64,7 +64,7 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (defau
 
 - [Research: feasibility, protocol → rclone mapping, auth, testing, upstreaming](docs/research/rclone-remotestorage-backend.md)
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
-- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908) (fixed in 4.49 behind `-s3.allowBackslashInKey`). RSilo was fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
+- [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908) (fixed in 4.49 behind `-s3.allowBackslashInKey`). RSilo: [#49](https://github.com/jonocodes/RSilo/issues/49) (long names); earlier bugs were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41).
 - [Upstream proposal](docs/upstream-proposal.md): draft rclone issue proposing the backend for inclusion. Not filed yet.
 
 ## Waiting on upstream
@@ -75,6 +75,7 @@ Tickets we've filed and are waiting on. `just upstream-status` shows their curre
 |---|---|---|---|
 | [remotestorage/armadietto#173](https://github.com/remotestorage/armadietto/issues/173) | 2026-10-19 | Classic server's folder listings return percent-encoded item names | name decoding under `vendor = armadietto` (`armadiettoName`) |
 | [remotestorage/armadietto#174](https://github.com/remotestorage/armadietto/issues/174) | 2026-10-19 | Classic server's HEAD omits Content-Length | `vendor = armadietto` skipping HEAD for metadata |
+| [jonocodes/RSilo#49](https://github.com/jonocodes/RSilo/issues/49) | 2026-11-02 | Offline store answers 500 to names over 255 bytes once percent-encoded | nothing to remove; update the "Long names" row above |
 
 Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20). SeaweedFS turning `\` into `/` in S3 keys ([seaweedfs/seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908)) was fixed by the opt-in `-s3.allowBackslashInKey` flag in [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), merged 2026-10-22. It shipped in 4.49 (2026-10-23). Once the 4.49 Docker image is published, RSilo's CI should move to it and add the flag. Not filed: 5apps answering 401 instead of 403 (probably not worth filing).
 

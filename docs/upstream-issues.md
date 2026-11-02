@@ -104,7 +104,7 @@ Running fstests against RSilo's offline server found problems with item names, m
 
 ### Offline store: long names fail with 500
 
-**Status:** not filed. Found 2026-11-02 by `rclone test info`. **Workaround:** none in the backend, which retries the 500 and then reports the error.
+**Status:** filed 2026-11-02 as [jonocodes/RSilo#49](https://github.com/jonocodes/RSilo/issues/49). **Workaround:** none in the backend, which retries the 500 and then reports the error.
 
 Same cause as armadietto's issue 3. The offline store writes each document under its percent-encoded name, so a 100-byte UTF-8 name becomes 292 bytes, `open` fails with `ENAMETOOLONG`, and the PUT returns `500 Internal Server Error`. Names up to 64 UTF-8 bytes of 3-byte characters (184 encoded) work. Unlike armadietto it doesn't claim success. But a 500 tells clients to retry something that can never work. A 4xx (414 or 400) would be better, or storing long names under a hash. The S3 store is probably unaffected, since S3 keys allow 1024 bytes, but that's untested.
 

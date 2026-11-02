@@ -1,6 +1,6 @@
 // Package remotestorage provides an interface to servers speaking the
 // remoteStorage protocol (draft-dejong-remotestorage), e.g. 5apps,
-// armadietto, php-remote-storage, mysteryshack or RSilo.
+// armadietto or RSilo.
 //
 // The protocol is a stripped-down WebDAV: documents are read and written with
 // GET/HEAD/PUT/DELETE, and a GET on a path ending in "/" returns a JSON-LD
@@ -105,7 +105,7 @@ losing the app's write.`,
 			Help: `Server software, to work around its known quirks.`,
 			Examples: []fs.OptionExample{{
 				Value: "other",
-				Help:  "Spec-compliant server (5apps, php-remote-storage, mysteryshack, RSilo, …)",
+				Help:  "Spec-compliant server (5apps, RSilo, …)",
 			}, {
 				Value: "armadietto",
 				Help:  "armadietto: folder listing keys come back percent-encoded",

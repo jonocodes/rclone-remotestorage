@@ -29,7 +29,7 @@ Fields follow the Feature request form.
 
 **What problem are you trying to solve?**
 
-> [remoteStorage](https://remotestorage.io) is an open protocol for per-user storage that web apps write to, specified as an IETF Internet-Draft ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/), currently -27). Users choose a provider and apps store their data there. There's a hosted provider (5apps) and several self-hostable servers (armadietto, php-remote-storage, mysteryshack, RSilo).
+> [remoteStorage](https://remotestorage.io) is an open protocol for per-user storage that web apps write to, specified as an IETF Internet-Draft ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/), currently -27). Users choose a provider and apps store their data there. There's a hosted provider (5apps) and maintained self-hostable servers (armadietto, RSilo).
 >
 > There's no good way to get at that data outside a browser. You can't back it up with ordinary tools, sync it with another remote, or mount it. The existing CLI tools are Node scripts for one-off backups. rclone would make a remoteStorage account an ordinary remote: `copy`/`sync` for backup, and `mount` to edit app data with local tools.
 >
