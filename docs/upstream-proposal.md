@@ -13,7 +13,7 @@ The form's checkboxes ask you to confirm you've searched the forum and issues. A
 ## Decide before filing
 
 - [x] **Test account.** The draft offers to *try* to arrange a dedicated 5apps account for integration.rclone.org, without promising one (decided 2026-11-02). Update it if you secure one.
-- [ ] **RSilo as a Docker image.** The draft offers to package RSilo as an image for rclone's integration server, which may not have bun. Drop that if you won't do it.
+- [x] **RSilo as a Docker image.** The draft offers to package RSilo as an image for rclone's integration server, which may not have bun (decided 2026-11-02).
 - [ ] **Maintainer.** The draft says you'll maintain the backend. Keep that only if you mean it, since rclone weighs it heavily for niche backends.
 - [ ] **Use in practice.** You may want some real-world mileage first (mount and sync against an account with live app data). The draft doesn't claim any beyond the test runs.
 - [ ] **AI assistance.** rclone allows AI-assisted contributions, but you must understand every line and be able to answer review questions without the tool (CONTRIBUTING "AI-assisted contributions"). That applies to the PR, not this issue. Also trim comments to rclone's style before the PR.

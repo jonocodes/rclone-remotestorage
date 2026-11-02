@@ -5,8 +5,9 @@
 #
 #   test/test-info.sh [remote names...]   default: TestRemoteStorage TestRemoteStorageRSilo
 #
-# --check-base32768 is left out: both servers reject its long non-ASCII names
-# (docs/upstream-issues.md), and the failures slow the run to over 30 minutes.
+# --check-base32768 (long non-ASCII names) only runs with CHECK_BASE32768=1:
+# armadietto rejects them (docs/upstream-issues.md), and its failures slow the
+# run to over 30 minutes. RSilo stores them since jonocodes/RSilo#50.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUTPUT=${OUTPUT:-$(mktemp -d)}
@@ -20,7 +21,7 @@ for name in "${@:-TestRemoteStorage TestRemoteStorageRSilo}"; do
     done < <("$s" start | grep -E '^[a-z_]+=')
     export "RCLONE_CONFIG_${up}_ENCODING=None"
     echo "== $n"
-    "$ROOT/rclone-remotestorage" test info --check-control --check-length --check-normalization --check-streaming \
+    "$ROOT/rclone-remotestorage" test info --check-control --check-length --check-normalization --check-streaming ${CHECK_BASE32768:+--check-base32768} \
       --low-level-retries 1 --retries 1 --write-json "$OUTPUT/$n.json" "$n:rclone-info" >"$OUTPUT/$n.log" 2>&1 || true
     "$s" stop >/dev/null
     jq -c 'del(.ControlCharacters)' "$OUTPUT/$n.json"

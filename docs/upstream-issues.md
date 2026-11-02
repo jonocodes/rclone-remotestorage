@@ -102,9 +102,9 @@ With a `rclone-test:rw` token, `HEAD /<user>/rclone-test` (a document outside th
 
 Running fstests against RSilo's offline server found problems with item names, missing Range support, and fidelity problems in the offline store. All were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41), merged 2026-10-20, and the backend needs no workarounds for RSilo.
 
-### Offline store: long names fail with 500
+### Offline store: long names failed with 500 (fixed)
 
-**Status:** filed 2026-11-02 as [jonocodes/RSilo#49](https://github.com/jonocodes/RSilo/issues/49). **Workaround:** none in the backend, which retries the 500 and then reports the error.
+**Status:** filed 2026-11-02 as [jonocodes/RSilo#49](https://github.com/jonocodes/RSilo/issues/49), fixed the same day by [#50](https://github.com/jonocodes/RSilo/pull/50). Segments whose encoding is over 255 bytes are now stored under a prefix plus SHA-256, with the full name in `.meta/.names/`, and paths too long for the filesystem get 414. Verified against `main` (`281d580`): `CHECK_BASE32768=1 just test-info TestRemoteStorageRSilo` passes, the max name length is now 16120, and `just test-all` passes.
 
 Same cause as armadietto's issue 3. The offline store writes each document under its percent-encoded name, so a 100-byte UTF-8 name becomes 292 bytes, `open` fails with `ENAMETOOLONG`, and the PUT returns `500 Internal Server Error`. Names up to 64 UTF-8 bytes of 3-byte characters (184 encoded) work. Unlike armadietto it doesn't claim success. But a 500 tells clients to retry something that can never work. A 4xx (414 or 400) would be better, or storing long names under a hash. The S3 store is probably unaffected, since S3 keys allow 1024 bytes, but that's untested.
 

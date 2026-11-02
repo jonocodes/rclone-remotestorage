@@ -27,7 +27,7 @@ start() {
     local src
     src=$(source_dir)
     cd "$src"
-    [ -d node_modules ] || bun install --frozen-lockfile >&2
+    bun install --frozen-lockfile >&2
     rm -rf "$DIR" && mkdir -p "$DIR"
     STORAGE_DIR=$DIR/storage DB_PATH=$DIR/db.sqlite PORT=$PORT \
         nohup bun src/server-offline.ts </dev/null >"$DIR/server.log" 2>&1 &
