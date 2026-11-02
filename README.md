@@ -68,6 +68,7 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (defau
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
 - [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908) (fixed in 4.49 behind `-s3.allowBackslashInKey`). RSilo bugs were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) and [#50](https://github.com/jonocodes/RSilo/pull/50).
 - [Upstream proposal](docs/upstream-proposal.md): the rclone issue proposing the backend for inclusion, filed as [rclone/rclone#10236](https://github.com/rclone/rclone/issues/10236).
+- [rclone docs page draft](docs/rclone/remotestorage.md): `docs/content/remotestorage.md` for the PR, in rclone's format. Its options section is generated from `fs.RegInfo`; regenerate it with `./rclone-remotestorage --config=/notfound help backend remotestorage` (or `make backenddocs` in rclone) after changing options.
 
 ## Waiting on upstream
 

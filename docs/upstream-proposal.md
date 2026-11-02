@@ -16,7 +16,7 @@ The form's checkboxes ask you to confirm you've searched the forum and issues. A
 - [x] **RSilo as a Docker image.** The draft offers to package RSilo as an image for rclone's integration server, which may not have bun (decided 2026-11-02).
 - [x] **Maintainer.** Yes: the draft says you'll maintain the backend (decided 2026-11-02).
 - [ ] **Use in practice.** You may want some real-world mileage first (mount and sync against an account with live app data). The draft doesn't claim any beyond the test runs.
-- [ ] **AI assistance.** rclone allows AI-assisted contributions, but you must understand every line and be able to answer review questions without the tool (CONTRIBUTING "AI-assisted contributions"). That applies to the PR, not this issue. Also trim comments to rclone's style before the PR.
+- [ ] **AI assistance.** rclone allows AI-assisted contributions, but you must understand every line and be able to answer review questions without the tool (CONTRIBUTING "AI-assisted contributions"). That applies to the PR, not this issue. Before the PR, drop the two comments that only make sense in this repo (the `init()` logger hack, the spike-doc pointer in `auth.go`); comment density already matches rclone's.
 - [x] `rclone version` output is in the draft (from the build used for `just test-all`).
 
 ## Draft
