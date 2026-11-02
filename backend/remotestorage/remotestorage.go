@@ -541,36 +541,13 @@ func (f *Fs) Rmdir(ctx context.Context, dir string) error {
 	return nil
 }
 
-// Copy src to this remote by downloading and re-uploading it. The protocol
-// has no copy or move, but rclone's VFS can't rename files without one.
+// Copy src to this remote using server-side copy operations.
 //
-// This is stored with the remote path given.
-//
-// It returns the destination Object and a possible error.
-//
-// Will only be called if src.Fs().Name() == f.Name()
-//
-// If it isn't possible then return fs.ErrorCantCopy
-func (f *Fs) Copy(ctx context.Context, src fs.Object, remote string) (dst fs.Object, err error) {
-	srcObj, ok := src.(*Object)
-	if !ok {
-		fs.Debugf(src, "Can't copy - not same remote type")
-		return nil, fs.ErrorCantCopy
-	}
-	// An existing document is overwritten with If-Match, as Update does
-	o := &Object{fs: f, remote: remote}
-	if err := o.readMetaData(ctx); err != nil && !errors.Is(err, fs.ErrorObjectNotFound) {
-		return nil, err
-	}
-	in, err := srcObj.Open(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer fs.CheckClose(in, &err)
-	if err := o.upload(ctx, in, srcObj); err != nil {
-		return nil, err
-	}
-	return o, nil
+// The protocol has no copy, so this always returns fs.ErrorCantCopy and
+// rclone copies by download and upload instead. It exists because rclone's
+// VFS won't rename files (mount) on a backend with neither Copy nor Move.
+func (f *Fs) Copy(ctx context.Context, src fs.Object, remote string) (fs.Object, error) {
+	return nil, fs.ErrorCantCopy
 }
 
 // ------------------------------------------------------------

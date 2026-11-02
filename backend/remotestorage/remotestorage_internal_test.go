@@ -13,6 +13,7 @@ import (
 	"github.com/rclone/rclone/fs/config/configmap"
 	"github.com/rclone/rclone/fs/fserrors"
 	"github.com/rclone/rclone/fs/hash"
+	"github.com/rclone/rclone/fs/operations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -194,7 +195,7 @@ func TestUpdateKeepsContentType(t *testing.T) {
 // memDoc is a document held by memServer
 type memDoc struct{ body, contentType, etag string }
 
-// memServer is an in-memory storage root honouring If-Match on PUT
+// memServer is an in-memory storage root honouring If-Match on PUT and DELETE
 func memServer(t *testing.T, docs map[string]*memDoc) http.HandlerFunc {
 	n := 0
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -212,9 +213,13 @@ func memServer(t *testing.T, docs map[string]*memDoc) http.HandlerFunc {
 			if r.Method == http.MethodGet {
 				io.WriteString(w, d.body)
 			}
-		case http.MethodPut:
+		case http.MethodPut, http.MethodDelete:
 			if m := r.Header.Get("If-Match"); m != "" && (d == nil || m != `"`+d.etag+`"`) {
 				w.WriteHeader(http.StatusPreconditionFailed)
+				return
+			}
+			if r.Method == http.MethodDelete {
+				delete(docs, p)
 				return
 			}
 			body, _ := io.ReadAll(r.Body)
@@ -228,27 +233,36 @@ func memServer(t *testing.T, docs map[string]*memDoc) http.HandlerFunc {
 }
 
 // The protocol has no copy, but rclone's VFS can't rename without one, so
-// Copy downloads and re-uploads, keeping the source's type
-func TestCopy(t *testing.T) {
+// Copy exists only to decline: rclone then copies by download and upload,
+// which keeps the source's type and overwrites with If-Match
+func TestMoveByDownloadUpload(t *testing.T) {
 	ctx := context.Background()
 	docs := map[string]*memDoc{
 		"d/src":      {`{"n":1}`, "application/json", "s1"},
+		"d/src2":     {`{"n":2}`, "application/json", "s2"},
 		"d/existing": {"old", "text/plain", "e1"},
 	}
 	f := newTestFs(t, memServer(t, docs), nil)
 	src, err := f.NewObject(ctx, "d/src")
 	require.NoError(t, err)
+	_, err = f.Copy(ctx, src, "d/x")
+	assert.ErrorIs(t, err, fs.ErrorCantCopy)
 
-	for _, remote := range []string{"d/new", "d/existing"} {
-		dst, err := f.Copy(ctx, src, remote)
-		require.NoError(t, err, remote)
-		assert.Equal(t, remote, dst.Remote())
-		assert.Equal(t, int64(7), dst.Size())
-		require.Contains(t, docs, remote)
-		assert.Equal(t, `{"n":1}`, docs[remote].body, remote)
-		assert.Equal(t, "application/json", docs[remote].contentType, remote)
-	}
-	assert.Equal(t, `{"n":1}`, docs["d/src"].body, "source untouched")
+	_, err = operations.Move(ctx, f, nil, "d/new", src)
+	require.NoError(t, err)
+	assert.NotContains(t, docs, "d/src")
+	require.Contains(t, docs, "d/new")
+	assert.Equal(t, `{"n":1}`, docs["d/new"].body)
+	assert.Equal(t, "application/json", docs["d/new"].contentType)
+
+	src2, err := f.NewObject(ctx, "d/src2")
+	require.NoError(t, err)
+	existing, err := f.NewObject(ctx, "d/existing")
+	require.NoError(t, err)
+	_, err = operations.Move(ctx, f, existing, "d/existing", src2)
+	require.NoError(t, err)
+	assert.Equal(t, `{"n":2}`, docs["d/existing"].body)
+	assert.Equal(t, "application/json", docs["d/existing"].contentType)
 }
 
 // The VFS may upload a temp file renamed over a document as a new file (Put),
