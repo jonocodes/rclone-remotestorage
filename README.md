@@ -111,4 +111,4 @@ It works in a random subfolder and removes it afterwards. Last run against 5apps
 
 ## License
 
-[GPL-3.0](LICENSE).
+[MIT](LICENSE), the same as rclone, so the backend can be contributed as is. `fstest/testserver/init.d/run.bash` and `docker.bash` are copied from rclone (MIT, Copyright Nick Craig-Wood), with its notice in [`COPYING.rclone`](fstest/testserver/init.d/COPYING.rclone).
