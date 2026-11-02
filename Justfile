@@ -57,3 +57,7 @@ upstream-status:
 # rclone mount against armadietto: writes, Content-Type on edits, renames, app edits (needs FUSE)
 test-mount: build
     ./test/mount-e2e.sh
+
+# rclone's full integration matrix (fstest/test_all) with the backend copied into an rclone checkout
+test-all *args:
+    ./test/test-all.sh {{args}}

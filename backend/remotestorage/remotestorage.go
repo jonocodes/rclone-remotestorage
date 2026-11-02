@@ -199,6 +199,12 @@ func (f *Fs) isKnownDir(dir string) bool {
 	return known
 }
 
+// isCategory reports whether dir, relative to the storage root, is the root
+// itself or a category ("documents", "public/documents"): what scopes name
+func isCategory(dir string) bool {
+	return !strings.Contains(strings.TrimPrefix(dir, "public/"), "/")
+}
+
 func parentDir(dir string) string {
 	p := path.Dir(dir)
 	if p == "." || p == "/" {
@@ -469,9 +475,10 @@ func (f *Fs) readDir(ctx context.Context, dir string) (*api.Listing, error) {
 // List the objects and directories in dir into entries
 func (f *Fs) List(ctx context.Context, dir string) (entries fs.DirEntries, err error) {
 	listing, err := f.readDir(ctx, dir)
-	if errors.Is(err, fs.ErrorDirNotFound) && (dir == "" || f.isKnownDir(dir)) {
-		// an empty folder can't be told from a missing one, so the remote's
-		// root always exists (e.g. an empty category the token is scoped to)
+	if errors.Is(err, fs.ErrorDirNotFound) && ((dir == "" && isCategory(f.root)) || f.isKnownDir(dir)) {
+		// an empty folder can't be told from a missing one, so a remote whose
+		// root is the storage root or a category exists (e.g. an empty category
+		// the token is scoped to)
 		return nil, nil
 	}
 	if err != nil {

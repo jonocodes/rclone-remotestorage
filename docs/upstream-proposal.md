@@ -2,7 +2,7 @@
 
 This is a draft of the issue that proposes the backend to rclone, before any PR is opened. Posting it is a public action, so the project owner files it. When it's filed, record the link and date here and in the README.
 
-Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed). The 5apps run is from 2026-10-19 (86 passed, 0 failed), before the mount fixes, so re-run it with `just test-remote` before filing.
+Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). For the PR, take ports 18001 and 18002 in rclone's `fstest/testserver/init.d/PORTS.md` (free in v1.75.2). The 5apps run is from 2026-10-19 (86 passed, 0 failed), before the mount fixes, so re-run it with `just test-remote` before filing.
 
 ## Where to file
 
@@ -55,7 +55,7 @@ Fields follow the Feature request form.
 > - RSilo in offline mode (a modern server, draft -22: Last-Modified, Range)
 > - a real 5apps account (manual run)
 >
-> Both local servers already have `fstest/testserver/init.d/` scripts, so they start themselves during tests.
+> Both local servers have `fstest/testserver/init.d/` scripts built on `run.bash`, so they start themselves during tests. With the backend copied into rclone v1.75.2, `go run ./fstest/test_all -backends remotestorage` passes cleanly against both: backend, `fs/operations`, `fs/sync`, `cmd/bisync` and `vfs`. `cmd/gitannex` is skipped because it only accepts remotes from a config file, the same as for the other self-starting servers.
 >
 > **Questions before I open a PR:**
 >

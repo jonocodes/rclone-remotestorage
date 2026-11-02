@@ -104,6 +104,34 @@ func TestListEmptyIsDirNotFound(t *testing.T) {
 	assert.ErrorIs(t, f.Rmdir(context.Background(), "made"), fs.ErrorDirNotFound)
 }
 
+// A token's scope names categories, so the storage root and categories exist
+// even when empty; any deeper root must be found like any other folder
+func TestListEmptyRoot(t *testing.T) {
+	for root, exists := range map[string]bool{
+		"":                 true,
+		"documents":        true,
+		"public/documents": true,
+		"documents/sub":    false,
+		"a/b/notfound":     false,
+	} {
+		f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{}}`)
+		}, configmap.Simple{})
+		g, err := NewFs(context.Background(), "test", root, configmap.Simple{"storage_root": f.opt.StorageRoot, "token": "tok"})
+		require.NoError(t, err, root)
+		_, err = g.List(context.Background(), "")
+		if exists {
+			assert.NoError(t, err, root)
+		} else {
+			assert.ErrorIs(t, err, fs.ErrorDirNotFound, root)
+		}
+	}
+}
+
 func TestOpenEmulatesIgnoredRange(t *testing.T) {
 	f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "10")
