@@ -82,6 +82,13 @@ Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](ht
 
 Edits made by remoteStorage apps show up once the directory cache expires (`--dir-cache-time`). Change polling via the root folder's ETag is planned.
 
+Known problems, found by a manual run against armadietto (2026-11-02):
+
+- **Renames fail** with an I/O error, for both files and folders. rclone's VFS refuses to rename without a server-side Move or Copy, and the protocol has neither. Programs that save to a temp file and rename it over the original fail too, leaving the temp file behind.
+- **A same-size change by an app isn't seen** if the file is already in the VFS cache. The cache compares only sizes, because there are no hashes and modtimes aren't used.
+- **Conflict protection doesn't hold in a mount.** A write that hits a conflict (412) is retried. Once the directory cache expires the mount picks up the new ETag, and the retry then overwrites the app's change.
+- **Creating a file the app just created overwrites it**, because new files are written without `If-None-Match: *`.
+
 ## Testing against a real account
 
 Log in to a scratch scope (the remote lands in `./rclone.conf`), then point the integration suite at it:
