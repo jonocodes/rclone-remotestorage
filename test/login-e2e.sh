@@ -12,7 +12,7 @@ CHROME=${CHROME:-$(ls -d /nix/store/*-playwright-chromium/*/chrome 2>/dev/null |
 RCLONE=("$ROOT/rclone-remotestorage" --config "$WORK/rclone.conf")
 
 eval "$("$ROOT/test/armadietto.sh" start)"
-ADDRESS="$ARMADIETTO_USER@127.0.0.1:${ARMADIETTO_PORT:-18001}"
+ADDRESS="$ARMADIETTO_USER@127.0.0.1:${ARMADIETTO_PORT:-18011}"
 
 echo "== rclone config create (address $ADDRESS)"
 # BROWSER=true: xdg-open "opens" nothing, rclone still logs the URL

@@ -1,16 +1,35 @@
 #!/usr/bin/env bash
-# Self-starting test server for TestRemoteStorage:, in rclone's
-# fstest/testserver/init.d convention: "start" prints key=value config lines,
-# which fstests turns into RCLONE_CONFIG_TESTREMOTESTORAGE_* env vars.
-set -euo pipefail
-ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
-case ${1:-} in
-start)
-  "$ROOT/test/armadietto.sh" start | sed -n 's/^export RCLONE_CONFIG_TESTREMOTESTORAGE_\([A-Z_]*\)=/\L\1=/p' \
-    | sed 's/^type=/type=/'
-  echo "_connect=127.0.0.1:${ARMADIETTO_PORT:-18001}"
-  ;;
-stop) "$ROOT/test/armadietto.sh" stop ;;
-status) docker inspect -f '{{.State.Running}}' "${ARMADIETTO_NAME:-rclone-rs-armadietto}" 2>/dev/null | grep -q true && echo running || echo stopped ;;
-*) echo "usage: $0 start|stop|status" >&2; exit 2 ;;
-esac
+# armadietto (classic server, draft -10) in Docker for TestRemoteStorage:.
+# Creates a user and approves the OAuth consent form to mint a *:rw token.
+
+set -e
+
+NAME=rclone-remotestorage-armadietto
+PORT=18001
+IMAGE=docker.io/remotestorage/armadietto-monolithic:latest
+CLIENT=http://127.0.0.1:53682
+
+. $(dirname "$0")/docker.bash
+
+start() {
+    docker run --rm -d --name $NAME -p 127.0.0.1:${PORT}:8000 $IMAGE >/dev/null
+    local base=http://127.0.0.1:${PORT} user=rclone pass=rclonepass1
+    for _ in $(seq 60); do curl -sf -o /dev/null $base/ && break; sleep 0.5; done
+    curl -sf -o /dev/null -X POST $base/signup \
+         --data "username=$user&email=$user@example.com&password=$pass"
+    # The token comes back in the fragment of the consent form's redirect
+    local loc token
+    loc=$(curl -s -o /dev/null -w '%{redirect_url}' -X POST $base/oauth \
+          --data-urlencode "client_id=$CLIENT" --data-urlencode "redirect_uri=$CLIENT/" \
+          --data "response_type=token&scope=*:rw&username=$user&password=$pass&allow=Allow")
+    token=$(sed -n 's/.*[#&]access_token=\([^&]*\).*/\1/p' <<<"$loc")
+    [ -n "$token" ] || { echo "failed to mint token (redirect: $loc)" >&2; return 1; }
+
+    echo type=remotestorage
+    echo storage_root=$base/storage/$user
+    echo token=$token
+    echo vendor=armadietto
+    echo _connect=127.0.0.1:${PORT}
+}
+
+. $(dirname "$0")/run.bash

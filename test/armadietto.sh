@@ -9,8 +9,8 @@
 set -euo pipefail
 
 IMAGE=${ARMADIETTO_IMAGE:-docker.io/remotestorage/armadietto-monolithic:latest}
-NAME=${ARMADIETTO_NAME:-rclone-rs-armadietto}
-PORT=${ARMADIETTO_PORT:-18001}
+NAME=${ARMADIETTO_NAME:-rclone-rs-armadietto-dev}
+PORT=${ARMADIETTO_PORT:-18011}
 BASE=http://127.0.0.1:$PORT
 USER_=rclone${RANDOM}
 PASS=rclonepass1
