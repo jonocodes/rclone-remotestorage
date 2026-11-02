@@ -17,6 +17,8 @@ just build
 ./rclone-remotestorage copy ./notes myrs:documents/notes
 ```
 
+This build keeps its remotes in `./rclone.conf` next to the binary, not in your global rclone config, because the repo is for trying the backend out. Point `RCLONE_CONFIG` or `--config` elsewhere to override that.
+
 Logging in looks the account up with WebFinger, opens your browser on the server's consent page, and captures the token on a local listener (`http://127.0.0.1:53682`). Interactive `rclone config` asks the same questions. Re-run the login with `rclone config reconnect myrs:`, for example when a token expires.
 
 - **Narrower access:** set `scope` (advanced, default `*:rw`) to a category such as `documents:rw` to limit the remote to that folder. This is a good idea for a first try on an account holding live app data.
@@ -38,7 +40,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-You need Go, [just](https://just.systems) and [bun](https://bun.sh), plus Docker or podman for the armadietto test server. The Justfile sets `CGO_ENABLED=0` and points `RCLONE_CONFIG` at `./rclone.conf` (gitignored), so remotes made while working on this project never touch `~/.config/rclone/rclone.conf`. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
+You need Go, [just](https://just.systems) and [bun](https://bun.sh), plus Docker or podman for the armadietto test server. The Justfile sets `CGO_ENABLED=0`. Remotes live in `rclone.conf` next to the binary, i.e. `./rclone.conf` in the repo (gitignored), never in `~/.config/rclone/rclone.conf`. The binary itself defaults to that file, however it's run, and the Justfile points `RCLONE_CONFIG` at the same file for `go test`. `RCLONE_CONFIG` or `--config` override it. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
 
 ```sh
 just                    # list recipes
