@@ -31,7 +31,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 | Modification times | can't be set. Shows the server's Last-Modified (upload time) if it sends one, else `--default-time`. |
 | Empty folders | can't exist. A folder appears when a document is written below it. |
 | Copy/move on the server | not in the protocol. rclone downloads and re-uploads. |
-| Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it |
+| Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it. Overwriting a document keeps its existing type unless the source has one, so editing an extensionless app document through `mount` doesn't turn it into `application/octet-stream`. New uploads get a type guessed from the file name. |
 | Concurrent app edits | overwrite and delete use `If-Match` (`conditional_writes`, on by default), so an app's newer write fails with a conflict instead of being lost |
 | `vendor = armadietto` | works around armadietto returning percent-encoded listing keys and HEAD responses without Content-Length. Names that literally contain `%XX` can't be told apart there. |
 

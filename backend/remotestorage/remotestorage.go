@@ -723,16 +723,27 @@ func (o *Object) conditionalHeaders() map[string]string {
 	return map[string]string{"If-Match": `"` + o.etag + `"`}
 }
 
-func (o *Object) upload(ctx context.Context, in io.Reader, src fs.ObjectInfo, options ...fs.OpenOption) error {
-	contentType := fs.MimeType(ctx, src)
-	if contentType == "" {
-		contentType = "application/octet-stream"
+// contentType is the type to upload src with: its own if it has one, else
+// the document's current type (apps rely on it, and the name is unchanged so
+// guessing from it can't do better), else a guess from the name
+func (o *Object) contentType(ctx context.Context, src fs.ObjectInfo) string {
+	if do, ok := src.(fs.MimeTyper); ok {
+		if t := do.MimeType(ctx); t != "" {
+			return t
+		}
 	}
+	if o.mimeType != "" {
+		return o.mimeType
+	}
+	return fs.MimeTypeFromName(src.Remote())
+}
+
+func (o *Object) upload(ctx context.Context, in io.Reader, src fs.ObjectInfo, options ...fs.OpenOption) error {
 	opts := rest.Opts{
 		Method:       "PUT",
 		Path:         o.fs.filePath(o.remote),
 		Body:         in,
-		ContentType:  contentType,
+		ContentType:  o.contentType(ctx, src),
 		ExtraHeaders: o.conditionalHeaders(),
 		Options:      options,
 		NoResponse:   true,

@@ -160,6 +160,43 @@ func TestConditionalWritesOff(t *testing.T) {
 	assert.Equal(t, int64(3), o.size)
 }
 
+// Overwriting through a mount uploads from the VFS cache, whose files have no
+// type of their own. App documents usually have no extension, so a guess from
+// the name would turn application/json into application/octet-stream.
+func TestUpdateKeepsContentType(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		src  fs.ObjectInfo
+		want string
+	}{
+		{"guess from name", &fakeInfo{remote: "note", size: 3}, "application/json; charset=UTF-8"},
+		{"source has a type", &fakeMimeInfo{fakeInfo{remote: "note", size: 3}, "text/plain"}, "text/plain"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
+				switch r.Method {
+				case http.MethodPut:
+					assert.Equal(t, tc.want, r.Header.Get("Content-Type"))
+					w.WriteHeader(http.StatusCreated)
+				case http.MethodHead:
+					w.Header().Set("Content-Length", "3")
+					w.Header().Set("Content-Type", tc.want)
+				}
+			}, nil)
+			o := &Object{fs: f, remote: "note", hasMetaData: true, size: 1, etag: "old", mimeType: "application/json; charset=UTF-8"}
+			require.NoError(t, o.Update(context.Background(), strings.NewReader("new"), tc.src))
+		})
+	}
+}
+
+// fakeMimeInfo is a fakeInfo whose source knows its type
+type fakeMimeInfo struct {
+	fakeInfo
+	mimeType string
+}
+
+func (i *fakeMimeInfo) MimeType(context.Context) string { return i.mimeType }
+
 // fakeInfo is a minimal fs.ObjectInfo for uploads
 type fakeInfo struct {
 	fs.ObjectInfo
