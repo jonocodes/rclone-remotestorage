@@ -66,6 +66,24 @@ Draft:
 >
 > `lib/controllers/storage.js` L71 sets the header only when the request is not a HEAD: `if (item && item.value && !head) this._headers['Content-Length'] = item.value.length;`. The size is already known from the folder metadata (`item['Content-Length']`). HEAD is meant to return the same headers as GET (RFC 9110 §9.3.2), and clients use it to read a document's size without downloading it.
 
+### 3. PUT reports success when a long name can't be stored
+
+**Status:** not filed. Found 2026-11-02 by `rclone test info`. **Workaround:** none needed for data safety, since the backend re-reads a document's metadata after uploading it, so rclone reports "object not found" instead of losing the write quietly. Names stay limited by the server's disk (see draft).
+
+Draft:
+
+> **PUT returns 200 but stores nothing when the encoded name is over 255 bytes**
+>
+> The file store saves each document under its percent-encoded name, so a name of 100 UTF-8 bytes becomes 292 bytes on disk, over the usual 255-byte filename limit. The write fails with `ENAMETOOLONG`, which is logged, but the client still gets a success response:
+>
+> ```sh
+> N=$(jq -rn '"ကခဂဃငစဆဇဈဉညဋဌဍဎဏတထဒဓနပဖဗဘမယရလဝသဟ.txt"|@uri')   # 100 bytes, 292 encoded
+> curl -X PUT -H "Authorization: Bearer $T" -H 'Content-Type: text/plain' --data x "$ROOT/t/$N"   # 200
+> curl -H "Authorization: Bearer $T" "$ROOT/t/$N"                                                  # 404
+> ```
+>
+> Server log: `error: put failed: ENAMETOOLONG: name too long, open '…/storage/t/%E1%80%80…'`. The client believes the document was saved. Returning an error (e.g. 414 or 400) would at least stop the silent loss. Storing long names under a hash would remove the limit.
+
 ### Not bugs, for the record
 
 - **No `Last-Modified`.** The classic server advertises draft `-10`, and Last-Modified only arrived in `-11`.
@@ -83,6 +101,17 @@ With a `rclone-test:rw` token, `HEAD /<user>/rclone-test` (a document outside th
 ## RSilo
 
 Running fstests against RSilo's offline server found problems with item names, missing Range support, and fidelity problems in the offline store. All were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41), merged 2026-10-20, and the backend needs no workarounds for RSilo.
+
+### Offline store: long names fail with 500
+
+**Status:** not filed. Found 2026-11-02 by `rclone test info`. **Workaround:** none in the backend, which retries the 500 and then reports the error.
+
+Same cause as armadietto's issue 3. The offline store writes each document under its percent-encoded name, so a 100-byte UTF-8 name becomes 292 bytes, `open` fails with `ENAMETOOLONG`, and the PUT returns `500 Internal Server Error`. Names up to 64 UTF-8 bytes of 3-byte characters (184 encoded) work. Unlike armadietto it doesn't claim success. But a 500 tells clients to retry something that can never work. A 4xx (414 or 400) would be better, or storing long names under a hash. The S3 store is probably unaffected, since S3 keys allow 1024 bytes, but that's untested.
+
+```sh
+N=$(jq -rn '"ကခဂဃငစဆဇဈဉညဋဌဍဎဏတထဒဓနပဖဗဘမယရလဝသဟ.txt"|@uri')
+curl -X PUT -H "Authorization: Bearer $T" -H 'Content-Type: text/plain' --data x "$ROOT/t/$N"   # 500
+```
 
 ## SeaweedFS
 

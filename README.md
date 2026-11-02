@@ -34,6 +34,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 | Content-Type | preserved on upload and download, which matters because remoteStorage apps rely on it. Overwriting a document keeps its existing type unless the source has a real one (not `application/octet-stream`). Editing an extensionless app document through `mount`, in place or by saving a temp file and renaming it over the original, keeps e.g. `application/json`. Other uploads get a type guessed from the file name. |
 | Concurrent app edits | overwrite and delete use `If-Match` (`conditional_writes`, on by default), so an app's newer write fails with a conflict instead of being lost. Creating a file doesn't check: rclone expects an upload to replace whatever is there (`rcat` relies on it), so a file an app just created is overwritten. In a mount, see below. |
 | `vendor = armadietto` | works around armadietto returning percent-encoded listing keys and HEAD responses without Content-Length. Names that literally contain `%XX` can't be told apart there. |
+| Long names | armadietto and RSilo's offline store save documents under their percent-encoded names, so a name must fit the disk's 255-byte limit *after* encoding: 255 ASCII letters, but only about 28 characters of a script like Burmese or Chinese (9 encoded bytes each). Longer names fail: RSilo answers 500, and armadietto claims success but stores nothing, which rclone reports as "object not found". See [upstream issues](docs/upstream-issues.md). |
 
 ## Development
 
