@@ -40,7 +40,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-You need Go, [just](https://just.systems) and [bun](https://bun.sh), plus Docker or podman for the armadietto test server. The Justfile sets `CGO_ENABLED=0`. Remotes live in `rclone.conf` next to the binary, i.e. `./rclone.conf` in the repo (gitignored), never in `~/.config/rclone/rclone.conf`. The binary itself defaults to that file, however it's run, and the Justfile points `RCLONE_CONFIG` at the same file for `go test`. `RCLONE_CONFIG` or `--config` override it. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
+You need Go and [just](https://just.systems), plus Docker or podman for the armadietto and RSilo test servers. The Justfile sets `CGO_ENABLED=0`. Remotes live in `rclone.conf` next to the binary, i.e. `./rclone.conf` in the repo (gitignored), never in `~/.config/rclone/rclone.conf`. The binary itself defaults to that file, however it's run, and the Justfile points `RCLONE_CONFIG` at the same file for `go test`. `RCLONE_CONFIG` or `--config` override it. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
 
 ```sh
 just                    # list recipes
@@ -58,9 +58,9 @@ The integration suite runs against two local servers, started and stopped automa
 | Remote | Server | Covers |
 |---|---|---|
 | `TestRemoteStorage:` | armadietto (classic) in Docker | old-style server: draft -10, no Last-Modified, no Range, its listing-name quirks (`vendor = armadietto`) |
-| `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline mode (bun + SQLite + a local directory) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
+| `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline mode in Docker (`ghcr.io/jonocodes/rsilo:main`) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
 
-RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (default `main`). Set `RSILO_SRC=<path>` to run a local RSilo checkout instead, for example while changing RSilo. Setting `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` makes that RSilo store its files in S3, e.g. a local SeaweedFS.
+RSilo runs from `ghcr.io/jonocodes/rsilo:main`, pulled on each start. Set `RSILO_IMAGE` to run another image, or `RSILO_SRC=<path>` to build one from a local RSilo checkout, for example while changing RSilo. `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` are passed through, so RSilo stores its files in S3, e.g. a local SeaweedFS reachable from inside the container.
 
 ## Docs
 

@@ -3,10 +3,6 @@
 export RCLONE_CONFIG := env("RCLONE_CONFIG", justfile_directory() / "rclone.conf")
 export CGO_ENABLED := env("CGO_ENABLED", "0")
 
-# RSilo test server (fstest/testserver/init.d/TestRemoteStorageRSilo) is cloned at
-# this ref. Set RSILO_SRC=<checkout> to test a local RSilo instead.
-export RSILO_REF := env("RSILO_REF", "main")
-
 # List recipes
 default:
     @just --list
