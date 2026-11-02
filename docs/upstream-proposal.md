@@ -2,7 +2,7 @@
 
 This is a draft of the issue that proposes the backend to rclone, before any PR is opened. Posting it is a public action, so the project owner files it. When it's filed, record the link and date here and in the README.
 
-Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). For the PR, take ports 18001 and 18002 in rclone's `fstest/testserver/init.d/PORTS.md` (free in v1.75.2). The 5apps run is from 2026-10-19 (86 passed, 0 failed), before the mount fixes, so re-run it with `just test-remote` before filing.
+Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). For the PR, take ports 18001 and 18002 in rclone's `fstest/testserver/init.d/PORTS.md` (free in v1.75.2). The 5apps fstests run was repeated 2026-11-02 after all the fixes and passed in 76s (no per-test count; the 2026-10-19 run was 86 passed, 0 failed). A manual `nfsmount` check on macOS against 5apps passed the same day.
 
 ## Where to file
 

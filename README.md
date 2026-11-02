@@ -105,7 +105,7 @@ Log in to a scratch scope (the remote lands in `./rclone.conf`), then point the 
 just test-remote rs5:rclone-test
 ```
 
-It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-10-19): 86 passed, 0 failed, in 75s.
+It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-11-02, after the mount fixes): passed, no failures, in 76s. The previous run (2026-10-19) was 86 passed, 0 failed, in 75s.
 
 ## License
 
