@@ -61,3 +61,7 @@ test-mount: build
 # rclone's full integration matrix (fstest/test_all) with the backend copied into an rclone checkout
 test-all *args:
     ./test/test-all.sh {{args}}
+
+# rclone test info (which names each server stores as-is) against armadietto and RSilo
+test-info *remotes: build
+    ./test/test-info.sh {{remotes}}

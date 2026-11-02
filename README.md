@@ -47,6 +47,7 @@ just test-integration   # rclone's fstests suite against armadietto and RSilo; s
 just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
 just test-mount         # rclone mount against armadietto: writes, renames, Content-Type, app edits (needs FUSE)
 just test-all           # rclone's full test_all matrix, with the backend copied into an rclone checkout (rehearses the PR)
+just test-info          # rclone test info: which names armadietto and RSilo store as-is
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
