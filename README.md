@@ -44,6 +44,7 @@ just                    # list recipes
 just test               # unit tests against an in-process fake server
 just test-integration   # rclone's fstests suite against armadietto and RSilo; starts/stops both itself
 just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
+just test-mount         # rclone mount against armadietto: writes, renames, Content-Type, app edits (needs FUSE)
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
@@ -86,7 +87,7 @@ Use `--vfs-cache-mode writes` rather than `full` for data apps also change. `ful
 
 Conflict protection doesn't hold in a mount. A write that hits a conflict (412) is retried. Once the directory cache expires the mount picks up the app's new ETag, and the retry overwrites the app's change. The VFS doesn't track which version an edit was based on, so the backend can't prevent this.
 
-These were found by manual runs against armadietto (2026-11-02).
+These were found by manual runs against armadietto (2026-11-02). `just test-mount` checks the renames, Content-Type and app edits with `writes`.
 
 ## Testing against a real account
 

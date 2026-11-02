@@ -53,3 +53,7 @@ upstream-status:
     @grep -oE '\[[a-z0-9_.-]+/[a-zA-Z0-9_.-]+#[0-9]+\]' README.md | tr -d '[]' | sort -u | while IFS='#' read -r repo n; do \
       gh api "repos/$repo/issues/$n" --jq "\"$repo#$n  \(.state)  comments=\(.comments)  updated=\(.updated_at[:10])  \(.title)\""; \
     done
+
+# rclone mount against armadietto: writes, Content-Type on edits, renames, app edits (needs FUSE)
+test-mount: build
+    ./test/mount-e2e.sh
