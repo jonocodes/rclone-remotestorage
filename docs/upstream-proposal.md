@@ -49,6 +49,8 @@ Fields follow the Feature request form.
 >
 > Protocol limits it can't work around: no hashes (ETags are opaque), modtimes can't be set (Last-Modified is shown where the server sends it), no empty directories, and no copy or move on the server.
 >
+> `rclone test info` against armadietto and RSilo: every printable ASCII character is stored as-is; control characters, DEL and invalid UTF-8 aren't, and the default encoder covers exactly those. Names are capped at 255 characters.
+>
 > **Testing.** The fstests integration suite passes (86 passed, 0 failed) against:
 >
 > - armadietto in Docker (an older server, draft -10)
