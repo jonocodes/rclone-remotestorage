@@ -24,9 +24,22 @@ test-integration *args:
     RCLONE_CONFIG=$(mktemp -d)/rclone.conf go test ./backend/remotestorage/ -run TestIntegration -timeout 30m {{args}}
 
 # fstests against a remote in ./rclone.conf, e.g. just test-remote rs5:rclone-test
-# (works in a random subfolder of the path and removes it afterwards)
+# (works in a random subfolder of the path and removes it afterwards). Fails
+# if the remote isn't configured, which fstests would otherwise skip as a pass.
 test-remote remote *args:
-    go test ./backend/remotestorage/ -run TestIntegration -remote {{remote}} -timeout 30m {{args}}
+    #!/usr/bin/env bash
+    set -uo pipefail
+    log=$(mktemp)
+    go test ./backend/remotestorage/ -run TestIntegration -remote {{remote}} -timeout 30m -v {{args}} >"$log" 2>&1
+    rc=$?
+    if grep -q "Didn't find .* in config file" "$log"; then
+        echo "FAIL: remote {{remote}} isn't configured in ${RCLONE_CONFIG}; nothing was tested" >&2
+        exit 1
+    fi
+    grep -E -- '^\s*--- FAIL' "$log" || true
+    echo "passed=$(grep -cE -- '^\s*--- PASS: TestIntegration/' "$log") failed=$(grep -cE -- '^\s*--- FAIL: TestIntegration/' "$log") skipped=$(grep -cE -- '^\s*--- SKIP: TestIntegration/' "$log")  (log: $log)"
+    tail -1 "$log"
+    exit $rc
 
 # Start armadietto and print RCLONE_CONFIG_* exports: eval "$(just server)"
 server:
