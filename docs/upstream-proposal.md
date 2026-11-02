@@ -39,17 +39,17 @@ Fields follow the Feature request form.
 
 > Add a `remotestorage` backend. I have one working out of tree: https://github.com/jonocodes/rclone-remotestorage. It's a normal rclone backend package that I build into stock rclone v1.75.2, so upstreaming is mostly copying `backend/remotestorage/` across.
 >
-> **What it does.** The protocol is a stripped-down WebDAV: GET/HEAD/PUT/DELETE on documents, plus JSON folder listings. The backend is about 1,200 lines of Go, login included. It uses `lib/rest`, `fs/fshttp`, `lib/pacer` and `lib/encoder`, with its API types in `api/types.go`.
+> **What it does.** The protocol is a stripped-down WebDAV: GET/HEAD/PUT/DELETE on documents, plus JSON folder listings. The backend is about 1,300 lines of Go, login included. It uses `lib/rest`, `fs/fshttp`, `lib/pacer` and `lib/encoder`, with its API types in `api/types.go`.
 >
 > - list, read (with Range, and a fallback when a server ignores it), write, streamed upload, delete, `mount`
 > - a `Copy` that always returns `fs.ErrorCantCopy`, so `mount` can rename (see question 4)
 > - preserves Content-Type, which remoteStorage apps depend on
-> - optional `If-Match` on overwrite and delete (on by default), so a document an app changed meanwhile fails with a conflict instead of being silently overwritten
+> - optional `If-Match` on overwrite and delete (on by default), so with `copy`/`sync` a document an app changed meanwhile fails with a conflict instead of being silently overwritten. In a mount it only delays that: the VFS retries the upload, and once its cache picks up the new ETag the retry overwrites.
 > - a `vendor` option, like webdav's, for one server's quirks (armadietto: percent-encoded listing names and HEAD without Content-Length, reported as [armadietto#173](https://github.com/remotestorage/armadietto/issues/173) and [#174](https://github.com/remotestorage/armadietto/issues/174))
 >
 > Protocol limits it can't work around: no hashes (ETags are opaque), modtimes can't be set (Last-Modified is shown where the server sends it), no empty directories, and no copy or move on the server.
 >
-> `rclone test info` against armadietto and RSilo: every printable ASCII character is stored as-is; control characters, DEL and invalid UTF-8 aren't, and the default encoder covers exactly those. Names are capped at 255 characters.
+> `rclone test info` against armadietto and RSilo: every printable ASCII character is stored as-is; control characters, DEL and invalid UTF-8 aren't, and the default encoder covers exactly those. armadietto stores names percent-encoded on disk, so long non-ASCII names fail there (RSilo had the same limit until it was fixed today).
 >
 > **Testing.** The fstests integration suite passes (86 passed, 0 failed) against:
 >
