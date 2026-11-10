@@ -65,7 +65,7 @@ func TestListArmadiettoKeys(t *testing.T) {
 		assert.Equal(t, "/storage/alice/t/", r.URL.EscapedPath())
 		w.Header().Set("Content-Type", "application/ld+json")
 		// folder key as sent, document key through decodeURI
-		io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{
+		_, _ = io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{
 			"a%20b%3F/":{"ETag":"1"},
 			"c d%40%2B.txt":{"ETag":"2","Content-Type":"text/plain","Content-Length":5,"Last-Modified":"Tue, 20 Oct 2026 00:52:09 GMT"}}}`)
 	}, configmap.Simple{"vendor": "armadietto"})
@@ -87,7 +87,7 @@ func TestListArmadiettoKeys(t *testing.T) {
 
 func TestListEmptyIsDirNotFound(t *testing.T) {
 	f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{}}`)
+		_, _ = io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{}}`)
 	}, nil)
 	_, err := f.List(context.Background(), "nope")
 	assert.ErrorIs(t, err, fs.ErrorDirNotFound)
@@ -119,7 +119,7 @@ func TestListEmptyRoot(t *testing.T) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{}}`)
+			_, _ = io.WriteString(w, `{"@context":"http://remotestorage.io/spec/folder-description","items":{}}`)
 		}, configmap.Simple{})
 		g, err := NewFs(context.Background(), "test", root, configmap.Simple{"storage_root": f.opt.StorageRoot, "token": "tok"})
 		require.NoError(t, err, root)
@@ -135,7 +135,7 @@ func TestListEmptyRoot(t *testing.T) {
 func TestOpenEmulatesIgnoredRange(t *testing.T) {
 	f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", "10")
-		io.WriteString(w, "0123456789") // ignores Range
+		_, _ = io.WriteString(w, "0123456789") // ignores Range
 	}, nil)
 	o := &Object{fs: f, remote: "doc", hasMetaData: true, size: 10}
 	for _, tc := range []struct {
@@ -239,7 +239,7 @@ func memServer(t *testing.T, docs map[string]*memDoc) http.HandlerFunc {
 			w.Header().Set("Content-Length", fmt.Sprint(len(d.body)))
 			w.Header().Set("ETag", `"`+d.etag+`"`)
 			if r.Method == http.MethodGet {
-				io.WriteString(w, d.body)
+				_, _ = io.WriteString(w, d.body)
 			}
 		case http.MethodPut, http.MethodDelete:
 			if m := r.Header.Get("If-Match"); m != "" && (d == nil || m != `"`+d.etag+`"`) {

@@ -6,7 +6,9 @@ Status: early. Browser login, read, write, list, delete and `rclone mount` work.
 
 ## How it is built
 
-This is an out-of-tree backend. `backend/remotestorage` is an ordinary rclone backend package, and `cmd/rclone` builds stock rclone (all backends and commands, pinned in `go.mod`) with it added. No fork of rclone is needed. Upstreaming later means copying `backend/remotestorage/` into rclone.
+This is an out-of-tree backend. `backend/remotestorage` is an ordinary rclone backend package, and `cmd/rclone` builds stock rclone (all backends and commands, pinned in `go.mod`) with it added. No fork of rclone is needed to use it.
+
+This repo is the source of truth for the upstream PR too. `just upstream-sync` exports the backend into the rclone fork ([jonocodes/rclone](https://github.com/jonocodes/rclone), branch `remotestorage`, checked out at `../rclone` or `$RCLONE_FORK`) exactly as the PR adds it: the package with import paths rewritten, the test servers, the docs page, `docs/data/backends/remotestorage.yaml`, and one-line registrations in rclone's lists (`backend/all/all.go`, `PORTS.md`, `test_all/config.yaml`, README, docs index, navbar, manual). It is safe to re-run. Make changes here, then sync; don't edit the fork by hand. Files named `*_outoftree.go` stay behind: `remotestorage_outoftree.go` mutes the "no overview data found" error that out-of-tree builds log at startup.
 
 ## Usage
 
@@ -40,7 +42,7 @@ Logging in looks the account up with WebFinger, opens your browser on the server
 
 ## Development
 
-You need Go, [just](https://just.systems) and [bun](https://bun.sh), plus Docker or podman for the armadietto test server. The Justfile sets `CGO_ENABLED=0`. Remotes live in `rclone.conf` next to the binary, i.e. `./rclone.conf` in the repo (gitignored), never in `~/.config/rclone/rclone.conf`. The binary itself defaults to that file, however it's run, and the Justfile points `RCLONE_CONFIG` at the same file for `go test`. `RCLONE_CONFIG` or `--config` override it. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
+You need Go, [just](https://just.systems), and Docker or podman for the test servers. The Justfile sets `CGO_ENABLED=0`. Remotes live in `rclone.conf` next to the binary, i.e. `./rclone.conf` in the repo (gitignored), never in `~/.config/rclone/rclone.conf`. The binary itself defaults to that file, however it's run, and the Justfile points `RCLONE_CONFIG` at the same file for `go test`. `RCLONE_CONFIG` or `--config` override it. Test recipes each use a fresh throwaway config. Plain `go test` would fall back to the global config, so prefer the `just` recipes.
 
 ```sh
 just                    # list recipes
@@ -48,19 +50,21 @@ just test               # unit tests against an in-process fake server
 just test-integration   # rclone's fstests suite against armadietto and RSilo; starts/stops both itself
 just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
 just test-mount         # rclone mount against armadietto: writes, renames, Content-Type, app edits (needs FUSE)
-just test-all           # rclone's full test_all matrix, with the backend copied into an rclone checkout (rehearses the PR)
+just test-all           # rclone's full test_all matrix, with the backend exported into a clean rclone checkout at the go.mod version
+just upstream-sync      # export the backend, test servers and docs into the rclone fork (../rclone)
+just upstream-test-all  # upstream-sync, then the test_all matrix in the fork at rclone master: the run the PR quotes
 just test-info          # rclone test info: which names armadietto and RSilo store as-is
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
-The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`). Their scripts use rclone's `run.bash` and `docker.bash`, copied unchanged from rclone v1.75.2, which reference-count the servers so parallel test suites share them. `just server`, `test-login` and `test-mount` use a separate armadietto on port 18011.
+The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`). They use ports 28642 and 28643, registered in rclone's `PORTS.md` by the sync. Their scripts use rclone's `run.bash` and `docker.bash`, copied unchanged from rclone (identical in v1.75.2 and master), which reference-count the servers so parallel test suites share them. `just server`, `test-login` and `test-mount` use a separate armadietto on port 18011.
 
 | Remote | Server | Covers |
 |---|---|---|
 | `TestRemoteStorage:` | armadietto (classic) in Docker | old-style server: draft -10, no Last-Modified, no Range, its listing-name quirks (`vendor = armadietto`) |
-| `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline mode (bun + SQLite + a local directory) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
+| `TestRemoteStorageRSilo:` | [RSilo](https://github.com/jonocodes/RSilo) offline server in Docker (`ghcr.io/jonocodes/rsilo:0.3.0`, SQLite + a local directory) | modern server: draft -22, Last-Modified, HEAD with Content-Length, `206` byte ranges, spec-correct item names |
 
-RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (default `main`). Set `RSILO_SRC=<path>` to run a local RSilo checkout instead, for example while changing RSilo. Setting `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` makes that RSilo store its files in S3, e.g. a local SeaweedFS.
+The RSilo image is pinned to a release so rclone's integration server tests against a fixed server. To test an RSilo branch, build it and point `RSILO_IMAGE` at the build: `docker build -t rsilo:dev ../RSilo && RSILO_IMAGE=rsilo:dev just test-integration`. The token comes from RSilo's `dev-token` script, run inside the container.
 
 ## Docs
 
@@ -68,7 +72,7 @@ RSilo is cloned into `~/.cache/rclone-remotestorage/rsilo` at `RSILO_REF` (defau
 - [Spike: loopback implicit-grant token capture](docs/spikes/loopback-implicit-grant.md). Works with armadietto and 5apps.
 - [Upstream issues](docs/upstream-issues.md): server bugs the backend works around, with repros. Filed: armadietto [#173](https://github.com/remotestorage/armadietto/issues/173), [#174](https://github.com/remotestorage/armadietto/issues/174); SeaweedFS [#11908](https://github.com/seaweedfs/seaweedfs/issues/11908) (fixed in 4.49 behind `-s3.allowBackslashInKey`). RSilo bugs were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) and [#50](https://github.com/jonocodes/RSilo/pull/50).
 - [Upstream proposal](docs/upstream-proposal.md): the rclone issue proposing the backend for inclusion, filed as [rclone/rclone#10236](https://github.com/rclone/rclone/issues/10236).
-- [rclone docs page draft](docs/rclone/remotestorage.md): `docs/content/remotestorage.md` for the PR, in rclone's format. Its options section is generated from `fs.RegInfo`; regenerate it with `./rclone-remotestorage --config=/notfound help backend remotestorage` (or `make backenddocs` in rclone) after changing options.
+- [rclone docs page](docs/rclone/remotestorage.md) and [backend data](docs/rclone/remotestorage.yaml): `docs/content/remotestorage.md` and `docs/data/backends/remotestorage.yaml` for the PR, in rclone's format. The YAML feeds rclone's overview and tier tables; it was made with rclone's `bin/manage_backends.py create` and `features`, and the tier (4, Experimental) and ratings are our own judgement for review to adjust. Its options section is generated from `fs.RegInfo`; regenerate it with `./rclone-remotestorage --config=/notfound help backend remotestorage` (or `make backenddocs` in rclone) after changing options.
 
 ## Waiting on upstream
 
@@ -78,7 +82,7 @@ Tickets we've filed and are waiting on. `just upstream-status` shows their curre
 |---|---|---|---|
 | [remotestorage/armadietto#173](https://github.com/remotestorage/armadietto/issues/173) | 2026-10-19 | Classic server's folder listings return percent-encoded item names | name decoding under `vendor = armadietto` (`armadiettoName`) |
 | [remotestorage/armadietto#174](https://github.com/remotestorage/armadietto/issues/174) | 2026-10-19 | Classic server's HEAD omits Content-Length | `vendor = armadietto` skipping HEAD for metadata |
-| [rclone/rclone#10236](https://github.com/rclone/rclone/issues/10236) | 2026-11-02 | Proposal to add this backend to rclone, with four design questions | nothing; on a yes, open the PR (see docs/upstream-proposal.md) |
+| [rclone/rclone#10236](https://github.com/rclone/rclone/issues/10236) | 2026-11-02 | Proposal to add this backend to rclone, with four design questions | nothing. No maintainer reply yet; past proposals rarely got one, so the PR goes up without waiting (fork ready, see docs/upstream-proposal.md) |
 
 Done: RSilo's item names and Range support were fixed in [jonocodes/RSilo#41](https://github.com/jonocodes/RSilo/pull/41) (merged 2026-10-20), and its offline store's long names in [#50](https://github.com/jonocodes/RSilo/pull/50) (for [#49](https://github.com/jonocodes/RSilo/issues/49), merged 2026-11-02). SeaweedFS turning `\` into `/` in S3 keys ([seaweedfs/seaweedfs#11908](https://github.com/seaweedfs/seaweedfs/issues/11908)) was fixed by the opt-in `-s3.allowBackslashInKey` flag in [#11911](https://github.com/seaweedfs/seaweedfs/pull/11911), merged 2026-10-22. It shipped in 4.49 (2026-10-23). Once the 4.49 Docker image is published, RSilo's CI should move to it and add the flag. Not filed: 5apps answering 401 instead of 403 (probably not worth filing).
 

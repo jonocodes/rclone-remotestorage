@@ -5,7 +5,7 @@
 set -e
 
 NAME=rclone-remotestorage-armadietto
-PORT=18001
+PORT=28642
 IMAGE=docker.io/remotestorage/armadietto-monolithic:latest
 CLIENT=http://127.0.0.1:53682
 

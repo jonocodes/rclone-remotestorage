@@ -2,11 +2,22 @@
 
 **Filed 2026-11-02 as [rclone/rclone#10236](https://github.com/rclone/rclone/issues/10236).** The draft below matches what was posted. Before filing, this was a draft of the issue that proposes the backend to rclone, before any PR is opened.
 
-Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). For the PR, take ports 18001 and 18002 in rclone's `fstest/testserver/init.d/PORTS.md` (free in v1.75.2). The 5apps fstests run was repeated 2026-11-02 after all the fixes and passed in 76s (no per-test count; the 2026-10-19 run was 86 passed, 0 failed). A manual `nfsmount` check on macOS against 5apps passed the same day.
+Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). The 5apps fstests run was repeated 2026-11-02 after all the fixes and passed in 76s (no per-test count; the 2026-10-19 run was 86 passed, 0 failed). A manual `nfsmount` check on macOS against 5apps passed the same day.
+
+## After filing: open the PR without waiting
+
+As of 2026-11-09 the issue has no maintainer reply. That is normal: of the 12 backends merged 2024-2026 that we checked, none waited for a yes on an issue, and ncw rarely comments on proposal issues (none on Filen #6728, Internxt #7610 or Cloudinary #7989). Discussion happens on the PR. The one proposal that held its PR as a draft pending feedback, Quark Drive (#9661/#9662), has had no maintainer reply in 3.5 months. Measured from PR opening, ncw's first reply came the same or next day for about half of them and after 1.5 to 6.5 months for the rest; the median time to merge was about 5 months.
+
+So the PR goes up as a real (non-draft) PR, linking #10236 and repeating its four questions, with the design offered as open to change.
+
+- **Fork:** [jonocodes/rclone](https://github.com/jonocodes/rclone), branch `remotestorage` off master, checked out at `../rclone`. `just upstream-sync` regenerates everything the PR adds from this repo (see the README's "How it is built"); `just upstream-test-all` runs `test_all` there for the result the PR must quote.
+- **Ports:** 28642 (armadietto) and 28643 (RSilo), the next free ones in rclone's 286xx range.
+- **RSilo:** runs from `ghcr.io/jonocodes/rsilo:0.3.0`, so the integration server needs only Docker, not bun.
+- **`versionIntroduced`:** v1.77 (master is v1.77.0-DEV; kDrive and dosya took v1.76).
 
 ## Where to file
 
-As a **GitHub issue** on `rclone/rclone`, using the Feature request form. CONTRIBUTING.md says "If it is a big feature, then make an issue first so it can be discussed", and earlier new-backend proposals were filed this way and given the `new backend` label (e.g. [#9661](https://github.com/rclone/rclone/issues/9661), [#8456](https://github.com/rclone/rclone/issues/8456)). The form also has an optional forum-post field. A forum thread first is encouraged but not required. ncw reviews new backends himself and is busy (see the kDrive PR, [#8941](https://github.com/rclone/rclone/pull/8941)), so the issue is short and ends with concrete questions.
+As a **GitHub issue** on `rclone/rclone`, using the Feature request form. CONTRIBUTING.md says "If it is a big feature, then make an issue first so it can be discussed", and earlier new-backend proposals were filed this way (e.g. [#9661](https://github.com/rclone/rclone/issues/9661), [#8456](https://github.com/rclone/rclone/issues/8456); a collaborator labeled #8456 `new backend` the same day, while #9661 never got that label). The form also has an optional forum-post field. A forum thread first is encouraged but not required. ncw reviews new backends himself and is busy (see the kDrive PR, [#8941](https://github.com/rclone/rclone/pull/8941)), so the issue is short and ends with concrete questions.
 
 The form's checkboxes ask you to confirm you've searched the forum and issues. As of 2026-11-02, `gh search issues remotestorage --repo rclone/rclone` finds only an unrelated issue (#9308).
 
@@ -16,7 +27,7 @@ The form's checkboxes ask you to confirm you've searched the forum and issues. A
 - [x] **RSilo as a Docker image.** The draft offers to package RSilo as an image for rclone's integration server, which may not have bun (decided 2026-11-02).
 - [x] **Maintainer.** Yes: the draft says you'll maintain the backend (decided 2026-11-02).
 - [ ] **Use in practice.** You may want some real-world mileage first (mount and sync against an account with live app data). The draft doesn't claim any beyond the test runs.
-- [ ] **AI assistance.** rclone allows AI-assisted contributions, but you must understand every line and be able to answer review questions without the tool (CONTRIBUTING "AI-assisted contributions"). That applies to the PR, not this issue. Before the PR, drop the two comments that only make sense in this repo (the `init()` logger hack, the spike-doc pointer in `auth.go`); comment density already matches rclone's.
+- [ ] **AI assistance.** rclone allows AI-assisted contributions, but you must understand every line and be able to answer review questions without the tool (CONTRIBUTING "AI-assisted contributions"). That applies to the PR, not this issue. The two comments that only made sense in this repo are gone (2026-11-09): the logger hack moved to `remotestorage_outoftree.go`, which the sync leaves out, and the spike-doc pointer in `auth.go` was dropped.
 - [x] `rclone version` output is in the draft (from the build used for `just test-all`).
 
 ## Draft

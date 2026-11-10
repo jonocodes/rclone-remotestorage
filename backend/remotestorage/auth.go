@@ -1,7 +1,7 @@
 package remotestorage
 
 // WebFinger discovery and the browser login (OAuth implicit grant captured on
-// a loopback listener). See docs/spikes/loopback-implicit-grant.md.
+// a loopback listener).
 
 import (
 	"context"

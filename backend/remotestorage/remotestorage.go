@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -31,7 +30,6 @@ import (
 	"github.com/rclone/rclone/fs/fserrors"
 	"github.com/rclone/rclone/fs/fshttp"
 	"github.com/rclone/rclone/fs/hash"
-	fslog "github.com/rclone/rclone/fs/log"
 	"github.com/rclone/rclone/lib/encoder"
 	"github.com/rclone/rclone/lib/pacer"
 	"github.com/rclone/rclone/lib/readers"
@@ -46,11 +44,6 @@ const (
 
 // Register with Fs
 func init() {
-	// Out of tree there is no embedded docs/data/backends/remotestorage.yaml,
-	// so fs.Register logs "no overview data found" on every run. Mute it.
-	// Drop this once the backend lives in rclone itself.
-	fs.SetLogger(slog.NewTextHandler(io.Discard, nil))
-	defer fs.SetLogger(fslog.Handler)
 	fs.Register(&fs.RegInfo{
 		Name:        "remotestorage",
 		Description: "remoteStorage (remotestorage.io)",

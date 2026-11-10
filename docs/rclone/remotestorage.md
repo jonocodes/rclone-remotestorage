@@ -1,7 +1,7 @@
 ---
 title: "remoteStorage"
 description: "Rclone docs for remoteStorage"
-versionIntroduced: "v1.76"
+versionIntroduced: "v1.77"
 ---
 
 # remoteStorage

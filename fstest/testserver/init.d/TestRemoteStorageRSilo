@@ -1,60 +1,30 @@
 #!/usr/bin/env bash
-# RSilo (draft -22) in offline mode, SQLite plus a local directory, for
-# TestRemoteStorageRSilo:. Needs git and bun.
+# RSilo (draft -22) offline server in Docker for TestRemoteStorageRSilo:.
+# Mints a *:rw token with RSilo's dev-token script inside the container.
 #
-#   RSILO_SRC   an RSilo checkout to run (e.g. a branch under development);
-#               default: a clone of $RSILO_REPO at $RSILO_REF in ~/.cache
-#   RSILO_REF   git ref for the default clone (default: main)
+#   RSILO_IMAGE  image to run, e.g. a local build of an RSilo branch
+#                (default: ghcr.io/jonocodes/rsilo:0.3.0)
 
 set -e
 
 NAME=rclone-remotestorage-rsilo
-PORT=18002
-REPO=${RSILO_REPO:-https://github.com/jonocodes/RSilo}
-REF=${RSILO_REF:-main}
-DIR=${TMPDIR:-/tmp}/$NAME
+PORT=28643
+IMAGE=${RSILO_IMAGE:-ghcr.io/jonocodes/rsilo:0.3.0}
 
-source_dir() {
-    if [ -n "${RSILO_SRC:-}" ]; then echo "$RSILO_SRC"; return; fi
-    local dir=${XDG_CACHE_HOME:-$HOME/.cache}/rclone-remotestorage/rsilo
-    [ -d "$dir/.git" ] || git clone -q "$REPO" "$dir" >&2
-    git -C "$dir" fetch -q origin "$REF" >&2
-    git -C "$dir" checkout -q --detach FETCH_HEAD >&2
-    echo "$dir"
-}
+. $(dirname "$0")/docker.bash
 
 start() {
-    local src
-    src=$(source_dir)
-    cd "$src"
-    bun install --frozen-lockfile >&2
-    rm -rf "$DIR" && mkdir -p "$DIR"
-    STORAGE_DIR=$DIR/storage DB_PATH=$DIR/db.sqlite PORT=$PORT \
-        nohup bun src/server-offline.ts </dev/null >"$DIR/server.log" 2>&1 &
-    echo $! >"$DIR/pid"
-    for _ in $(seq 60); do curl -sf -o /dev/null http://localhost:$PORT/health && break; sleep 0.5; done
-    curl -sf -o /dev/null http://localhost:$PORT/health || { cat "$DIR/server.log" >&2; return 1; }
+    docker run --rm -d --name $NAME -p 127.0.0.1:${PORT}:8787 $IMAGE >/dev/null
+    local base=http://127.0.0.1:${PORT}
+    for _ in $(seq 60); do curl -sf -o /dev/null $base/health && break; sleep 0.5; done
     local token
-    token=$(DB_PATH=$DIR/db.sqlite bun src/scripts/dev-token.ts alice '*:rw' </dev/null 2>/dev/null | tail -1)
+    token=$(docker exec $NAME bun src/scripts/dev-token.ts alice '*:rw' </dev/null 2>/dev/null | tail -1)
+    [ -n "$token" ] || { echo "failed to mint token" >&2; return 1; }
 
     echo type=remotestorage
-    echo storage_root=http://localhost:$PORT/storage/alice
+    echo storage_root=$base/storage/alice
     echo token=$token
     echo _connect=127.0.0.1:${PORT}
-}
-
-stop() {
-    if status >/dev/null; then kill "$(cat "$DIR/pid")"; fi
-    rm -rf "$DIR"
-}
-
-status() {
-    if [ -f "$DIR/pid" ] && kill -0 "$(cat "$DIR/pid")" 2>/dev/null; then
-        echo "$NAME running"
-    else
-        echo "$NAME not running"
-        return 1
-    fi
 }
 
 . $(dirname "$0")/run.bash

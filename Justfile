@@ -3,9 +3,8 @@
 export RCLONE_CONFIG := env("RCLONE_CONFIG", justfile_directory() / "rclone.conf")
 export CGO_ENABLED := env("CGO_ENABLED", "0")
 
-# RSilo test server (fstest/testserver/init.d/TestRemoteStorageRSilo) is cloned at
-# this ref. Set RSILO_SRC=<checkout> to test a local RSilo instead.
-export RSILO_REF := env("RSILO_REF", "main")
+# The rclone fork the upstream PR is made from (github.com/jonocodes/rclone)
+export RCLONE_FORK := env("RCLONE_FORK", justfile_directory() / "../rclone")
 
 # List recipes
 default:
@@ -78,3 +77,11 @@ test-all *args:
 # rclone test info (which names each server stores as-is) against armadietto and RSilo
 test-info *remotes: build
     ./test/test-info.sh {{remotes}}
+
+# Export the backend, test servers and docs into the rclone fork, as the PR adds them
+upstream-sync:
+    ./test/upstream-sync.sh "$RCLONE_FORK"
+
+# upstream-sync, then rclone's full integration matrix in the fork (rclone master)
+upstream-test-all *args: upstream-sync
+    cd "$RCLONE_FORK" && go vet ./backend/remotestorage/ && go run ./fstest/test_all -backends remotestorage -output "$(mktemp -d)" {{args}}
