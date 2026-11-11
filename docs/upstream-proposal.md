@@ -14,7 +14,7 @@ So instead of a PR, we commented on #10236 (2026-11-10, below) linking the pushe
 
 The template also requires, for a new backend, "A test account so the maintainers can run the integration tests daily". Our position (decided 2026-11-10, stated in the comment): none is needed, because the self-starting Docker servers cover it the way they do for sftp, webdav and smb. That replaced the original question 3 and the offer to try for a 5apps account.
 
-When the PR goes up, squash the fork's commits into one (`remotestorage: add remoteStorage backend - fixes #10236`) and force-push, as CONTRIBUTING's "Squashing your commits" describes.
+The fork's commits were squashed into one, `4fd3ce0dc` (`remotestorage: add remoteStorage backend - fixes #10236`), on 2026-11-10, as CONTRIBUTING's "Squashing your commits" describes. Same content as the two commits the comment was posted on. Rebase it on master before opening the PR.
 
 ### Comment on #10236
 
