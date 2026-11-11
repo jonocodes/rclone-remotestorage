@@ -6,7 +6,8 @@ set -e
 
 NAME=rclone-remotestorage-armadietto
 PORT=28642
-IMAGE=docker.io/remotestorage/armadietto-monolithic:latest
+# Pinned by digest: the image only has a latest tag (pushed 2026-03-23)
+IMAGE=docker.io/remotestorage/armadietto-monolithic@sha256:8b3fc8a4ae17612c728a3a4ffabb90a1fa47fcc2ef8126031183a7280a197928
 CLIENT=http://127.0.0.1:53682
 
 . $(dirname "$0")/docker.bash

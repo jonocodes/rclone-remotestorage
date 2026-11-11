@@ -793,11 +793,17 @@ func (o *Object) Remove(ctx context.Context) error {
 		ExtraHeaders: o.conditionalHeaders(),
 		NoResponse:   true,
 	}
+	tries := 0
 	err := o.fs.pacer.Call(func() (bool, error) {
+		tries++
 		resp, err := o.fs.srv.Call(ctx, &opts)
 		return o.fs.shouldRetry(ctx, resp, err)
 	})
 	if statusCode(err) == http.StatusNotFound {
+		if tries > 1 {
+			// an earlier try deleted it but its response was lost
+			return nil
+		}
 		return fs.ErrorObjectNotFound
 	}
 	return err

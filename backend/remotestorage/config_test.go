@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jonocodes/rclone-remotestorage/backend/remotestorage/api"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/fs/config/configmap"
@@ -39,7 +40,7 @@ func TestParseLinks(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			var links []jrdLink
+			var links []api.Link
 			require.NoError(t, json.Unmarshal([]byte(tc.links), &links))
 			d, err := parseLinks(links)
 			require.NoError(t, err)
@@ -48,7 +49,7 @@ func TestParseLinks(t *testing.T) {
 			assert.Equal(t, tc.version, d.Version)
 		})
 	}
-	_, err := parseLinks([]jrdLink{{Rel: "remotestorage", Href: "https://s.example/x"}})
+	_, err := parseLinks([]api.Link{{Rel: "remotestorage", Href: "https://s.example/x"}})
 	assert.Error(t, err, "no auth endpoint")
 }
 
@@ -200,7 +201,11 @@ func TestConfigManual(t *testing.T) {
 	runConfig(t, m, map[string]string{"storage_root": "https://example.com/storage/alice", "token": "tok"})
 	assert.Equal(t, "https://example.com/storage/alice", m["storage_root"])
 	assert.Equal(t, "tok", m["token"])
-	// already configured by hand: nothing asked
-	runConfig(t, m, map[string]string{})
+	// already configured by hand: the token is kept by default
+	runConfig(t, m, map[string]string{"token": "unasked"})
 	assert.Equal(t, "tok", m["token"])
+	// reconnect: replacing asks for a new token, keeping the storage root
+	runConfig(t, m, map[string]string{"config_refresh_token": "true", "token": " new\n"})
+	assert.Equal(t, "https://example.com/storage/alice", m["storage_root"])
+	assert.Equal(t, "new", m["token"])
 }

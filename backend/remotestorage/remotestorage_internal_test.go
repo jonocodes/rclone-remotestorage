@@ -170,6 +170,27 @@ func TestConditionalWriteConflict(t *testing.T) {
 	assert.Equal(t, http.StatusPreconditionFailed, statusCode(err))
 }
 
+func TestRemoveRetryAfterDelete(t *testing.T) {
+	deletes := 0
+	f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodDelete, r.Method)
+		deletes++
+		if deletes == 1 {
+			// deleted, but the response was lost
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}, nil)
+	o := &Object{fs: f, remote: "doc", hasMetaData: true, size: 1, etag: "old"}
+	require.NoError(t, o.Remove(context.Background()))
+	assert.Equal(t, 2, deletes)
+
+	// without a retry a 404 still means the object wasn't there
+	deletes = 1
+	assert.ErrorIs(t, o.Remove(context.Background()), fs.ErrorObjectNotFound)
+}
+
 func TestConditionalWritesOff(t *testing.T) {
 	f := newTestFs(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {

@@ -4,11 +4,35 @@
 
 Test numbers were re-run 2026-11-02 (`just test-integration`: armadietto and RSilo each 86 passed, 0 failed; `just test-all`: all suites passed first try). The 5apps fstests run was repeated 2026-11-02 after all the fixes and passed in 76s (no per-test count; the 2026-10-19 run was 86 passed, 0 failed). A manual `nfsmount` check on macOS against 5apps passed the same day.
 
-## After filing: open the PR without waiting
+## After filing: wait for agreement on the issue, then open the PR
 
-As of 2026-11-09 the issue has no maintainer reply. That is normal: of the 12 backends merged 2024-2026 that we checked, none waited for a yes on an issue, and ncw rarely comments on proposal issues (none on Filen #6728, Internxt #7610 or Cloudinary #7989). Discussion happens on the PR. The one proposal that held its PR as a draft pending feedback, Quark Drive (#9661/#9662), has had no maintainer reply in 3.5 months. Measured from PR opening, ncw's first reply came the same or next day for about half of them and after 1.5 to 6.5 months for the rest; the median time to merge was about 5 months.
+As of 2026-11-10 the issue has no maintainer reply. **Don't open the PR until there is one.** rclone's pull request template (added by ncw 2026-06-18) says: "Anything beyond a trivial fix … should be discussed and agreed in an issue BEFORE you open a pull request. Pull requests for larger changes that have not been discussed in an issue first may be closed." Its checklist asks you to tick "This change is trivial **OR** it has been discussed and agreed in the linked issue."
 
-So the PR goes up as a real (non-draft) PR, linking #10236 and repeating its four questions, with the design offered as open to change.
+Older history points the other way, which is why this doc briefly said to open the PR without waiting (2026-11-09). Of the 12 backends merged 2024-2026 that we checked, none waited for a yes on an issue, and ncw rarely commented on proposal issues (none on Filen #6728, Internxt #7610 or Cloudinary #7989). But all except dosya's PR (April 2026) predate the template rule. The one proposal since then, Quark Drive (#9661), kept its PR (#9662) as a draft pending agreement and has had no maintainer reply in 3.5 months. Measured from PR opening, ncw's first reply came the same or next day for about half of the 12 and after 1.5 to 6.5 months for the rest; the median time to merge was about 5 months.
+
+So instead of a PR, we commented on #10236 (2026-11-10, below) linking the pushed branch and its passing `test_all` run, so there is concrete code to agree to. A forum.rclone.org post pointing at the issue is the other channel the issue form suggests.
+
+The template also requires, for a new backend, "A test account so the maintainers can run the integration tests daily". Our position (decided 2026-11-10, stated in the comment): none is needed, because the self-starting Docker servers cover it the way they do for sftp, webdav and smb. That replaced the original question 3 and the offer to try for a 5apps account.
+
+When the PR goes up, squash the fork's commits into one (`remotestorage: add remoteStorage backend - fixes #10236`) and force-push, as CONTRIBUTING's "Squashing your commits" describes.
+
+### Comment on #10236
+
+Posted 2026-11-10 as [#issuecomment-6787340801](https://github.com/rclone/rclone/issues/10236#issuecomment-6787340801), on fork commits `08e0083d2` and `bc42913b0`:
+
+> I've pushed the implementation so there's concrete code to look at: https://github.com/rclone/rclone/compare/master...jonocodes:rclone:remotestorage (on current master, including tests and docs).
+>
+> `go run ./fstest/test_all -backends remotestorage` passes on master against both self-starting servers: backend, fs/operations, fs/sync, cmd/bisync and vfs, all first try. `make quicktest` and golangci-lint (linux/windows/darwin/freebsd/openbsd) are clean.
+>
+> **Test account:** not needed. remoteStorage is an open protocol with self-hostable servers, so the backend is tested the same way as sftp, webdav and smb: `fstest/testserver/init.d/` starts two servers in Docker. `TestRemoteStorage` runs armadietto, the reference server (an older spec revision, draft -10), and `TestRemoteStorageRSilo` runs RSilo (a modern one, draft -22). Between them they cover both the old and new protocol behaviour. Each script creates a user and gets an access token by itself, so the integration server can run both without any credentials or external service.
+>
+> Following the PR template, I haven't opened a PR yet. The remaining questions from above, in short:
+>
+> 1. Would you take it? I'll maintain it.
+> 2. Implicit-grant login in the backend, or an implicit-grant mode in `lib/oauthutil`?
+> 3. Is the decline-only `Copy` for mount renames OK?
+>
+> Happy to change the approach on any of these.
 
 - **Fork:** [jonocodes/rclone](https://github.com/jonocodes/rclone), branch `remotestorage` off master, checked out at `../rclone`. `just upstream-sync` regenerates everything the PR adds from this repo (see the README's "How it is built"); `just upstream-test-all` runs `test_all` there for the result the PR must quote.
 - **Ports:** 28642 (armadietto) and 28643 (RSilo), the next free ones in rclone's 286xx range.
@@ -23,7 +47,7 @@ The form's checkboxes ask you to confirm you've searched the forum and issues. A
 
 ## Decide before filing
 
-- [x] **Test account.** The draft offers to *try* to arrange a dedicated 5apps account for integration.rclone.org, without promising one (decided 2026-11-02). Update it if you secure one.
+- [x] **Test account.** The draft offers to *try* to arrange a dedicated 5apps account for integration.rclone.org, without promising one (decided 2026-11-02). Update it if you secure one. Superseded 2026-11-10: no test account needed (see "After filing").
 - [x] **RSilo as a Docker image.** The draft offers to package RSilo as an image for rclone's integration server, which may not have bun (decided 2026-11-02).
 - [x] **Maintainer.** Yes: the draft says you'll maintain the backend (decided 2026-11-02).
 - [ ] **Use in practice.** You may want some real-world mileage first (mount and sync against an account with live app data). The draft doesn't claim any beyond the test runs.

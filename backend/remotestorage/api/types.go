@@ -28,6 +28,20 @@ type Item struct {
 	LastModified  string `json:"Last-Modified"`
 }
 
+// WebFinger is a WebFinger (RFC 7033) response for an account
+type WebFinger struct {
+	Links []Link `json:"links"`
+}
+
+// Link is a link in a WebFinger response. The remoteStorage link's Href is
+// the storage root and its Properties carry the spec version and auth URL.
+type Link struct {
+	Rel        string         `json:"rel"`
+	Href       string         `json:"href"`
+	Type       string         `json:"type"`
+	Properties map[string]any `json:"properties"`
+}
+
 // Error is returned for non-2xx responses
 type Error struct {
 	StatusCode int

@@ -8,7 +8,7 @@
 # The test remote is named TestRemoteStorage (see remotestorage_test.go).
 set -euo pipefail
 
-IMAGE=${ARMADIETTO_IMAGE:-docker.io/remotestorage/armadietto-monolithic:latest}
+IMAGE=${ARMADIETTO_IMAGE:-docker.io/remotestorage/armadietto-monolithic@sha256:8b3fc8a4ae17612c728a3a4ffabb90a1fa47fcc2ef8126031183a7280a197928}
 NAME=${ARMADIETTO_NAME:-rclone-rs-armadietto-dev}
 PORT=${ARMADIETTO_PORT:-18011}
 BASE=http://127.0.0.1:$PORT

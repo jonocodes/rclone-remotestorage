@@ -38,8 +38,9 @@ func Config(ctx context.Context, name string, m configmap.Mapper, in fs.ConfigIn
 		case authorizing != "":
 			return fs.ConfigGoto("address")
 		case token != "" && address == "":
-			// configured by hand (storage_root + token): nothing to do
-			return nil, nil
+			// Configured by hand (storage_root + token). Default to keeping
+			// the token so a non-interactive "config create" doesn't ask for one.
+			return fs.ConfigConfirm("replace", false, "config_refresh_token", "Token already configured - replace it?")
 		case token != "":
 			return fs.ConfigConfirm("replace", true, "config_refresh_token", "Token already configured - replace it?")
 		}

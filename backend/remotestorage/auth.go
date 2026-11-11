@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,8 +16,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jonocodes/rclone-remotestorage/backend/remotestorage/api"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/fshttp"
+	"github.com/rclone/rclone/lib/rest"
 )
 
 const (
@@ -36,13 +37,6 @@ type discovery struct {
 	StorageRoot string
 	AuthURL     string
 	Version     string
-}
-
-type jrdLink struct {
-	Rel        string         `json:"rel"`
-	Href       string         `json:"href"`
-	Type       string         `json:"type"`
-	Properties map[string]any `json:"properties"`
 }
 
 // splitAddress splits user@host, where host may carry a port
@@ -78,45 +72,28 @@ func discover(ctx context.Context, address string) (*discovery, error) {
 	if isLoopbackHost(host) {
 		schemes = append(schemes, "http")
 	}
-	client := fshttp.NewClient(ctx)
+	srv := rest.NewClient(fshttp.NewClient(ctx))
 	var lastErr error
 	for _, scheme := range schemes {
-		u := fmt.Sprintf("%s://%s/.well-known/webfinger?resource=%s", scheme, host, url.QueryEscape("acct:"+address))
-		d, err := discoverURL(ctx, client, u)
-		if err == nil {
-			return d, nil
+		opts := rest.Opts{
+			Method:       "GET",
+			RootURL:      fmt.Sprintf("%s://%s/.well-known/webfinger", scheme, host),
+			Parameters:   url.Values{"resource": {"acct:" + address}},
+			ExtraHeaders: map[string]string{"Accept": "application/jrd+json, application/json"},
 		}
-		lastErr = err
+		var wf api.WebFinger
+		_, err := srv.CallJSON(ctx, &opts, nil, &wf)
+		if err == nil {
+			return parseLinks(wf.Links)
+		}
+		lastErr = fmt.Errorf("webfinger %s: %w", opts.RootURL, err)
 	}
 	return nil, lastErr
 }
 
-func discoverURL(ctx context.Context, client *http.Client, u string) (*discovery, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/jrd+json, application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("webfinger: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("webfinger %s: %s", u, resp.Status)
-	}
-	var jrd struct {
-		Links []jrdLink `json:"links"`
-	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&jrd); err != nil {
-		return nil, fmt.Errorf("webfinger %s: %w", u, err)
-	}
-	return parseLinks(jrd.Links)
-}
-
 // parseLinks picks the remoteStorage link, accepting the legacy rels and
 // properties real clients (remotestorage.js, rs-backup) tolerate
-func parseLinks(links []jrdLink) (*discovery, error) {
+func parseLinks(links []api.Link) (*discovery, error) {
 	for _, l := range links {
 		if l.Rel != relDraft && !strings.EqualFold(l.Rel, "remotestorage") {
 			continue
