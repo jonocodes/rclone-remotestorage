@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# rclone mount against a throwaway armadietto container, with curl playing a
+# rclone mount against a throwaway server container, with curl playing a
 # remoteStorage app: writes, edits that must keep an app document's
 # Content-Type, renames (which need the backend's Copy), app edits showing up
 # in the mount, and a read-only mount.
+#
+#   test/mount-e2e.sh [armadietto|rsilo]   (default armadietto)
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+SERVER=${1:-armadietto}
+case $SERVER in armadietto|rsilo) ;; *) echo "unknown server $SERVER" >&2; exit 2;; esac
 WORK=$(mktemp -d)
 M=$WORK/mnt
 MPID=
 cleanup() {
   if [ -n "$MPID" ]; then fusermount3 -u "$M" 2>/dev/null || true; wait "$MPID" 2>/dev/null || true; fi
-  "$ROOT/test/armadietto.sh" stop
+  "$ROOT/test/$SERVER.sh" stop
   rm -rf "$WORK"
 }
 trap cleanup EXIT
 export RCLONE_CONFIG=$WORK/rclone.conf
-eval "$("$ROOT/test/armadietto.sh" start)"
+eval "$("$ROOT/test/$SERVER.sh" start)"
 R=$RCLONE_CONFIG_TESTREMOTESTORAGE_STORAGE_ROOT
 AUTH="Authorization: Bearer $RCLONE_CONFIG_TESTREMOTESTORAGE_TOKEN"
 mkdir -p "$M"
@@ -44,7 +48,7 @@ umnt() { fusermount3 -u "$M"; wait "$MPID" || true; MPID=; }
 JSON='application/json; charset=UTF-8'
 for mode in full writes; do
   d=$mode
-  echo "== --vfs-cache-mode $mode"
+  echo "== $SERVER: --vfs-cache-mode $mode"
   app_put "$d/note" "$JSON" '{"n":1}'
   app_put "$d/sub/a.txt" text/plain 'file a'
   mnt --vfs-cache-mode "$mode"
@@ -90,4 +94,4 @@ if echo x 2>/dev/null >"$M/app/ro.txt"; then fail "read-only mount accepted a wr
 [ "$(cat "$M/app/doc")" = 'VERSION 2' ] || fail "read through read-only mount"
 umnt
 
-echo "PASS: mount writes, keeps Content-Type, renames, sees app edits"
+echo "PASS: $SERVER: mount writes, keeps Content-Type, renames, sees app edits"

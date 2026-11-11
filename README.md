@@ -2,7 +2,7 @@
 
 A generic [rclone](https://rclone.org) backend for the [remoteStorage](https://remotestorage.io) protocol ([draft-dejong-remotestorage](https://datatracker.ietf.org/doc/draft-dejong-remotestorage/)). It targets the servers maintained today: 5apps (hosted), armadietto and RSilo, all tested. Other spec-compliant servers should work but are untested. php-remote-storage and mysteryshack are no longer maintained and aren't targeted. The end goal is `rclone mount` of a remoteStorage account as a local drive.
 
-Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto (automated, docker) and against a real 5apps account (manual run, 2026-10-19). Login is tested end to end against armadietto and was used for real against 5apps.
+Status: early. Browser login, read, write, list, delete and `rclone mount` work. rclone's fstests integration suite passes against armadietto and RSilo (automated, Docker) and against a real 5apps account (manual run, 2026-11-10). Login and mount are tested end to end against armadietto and RSilo, and login was used for real against 5apps.
 
 ## How it is built
 
@@ -48,8 +48,8 @@ You need Go, [just](https://just.systems), and Docker or podman for the test ser
 just                    # list recipes
 just test               # unit tests against an in-process fake server
 just test-integration   # rclone's fstests suite against armadietto and RSilo; starts/stops both itself
-just test-login         # end-to-end browser login (config create -> consent -> headless Chromium)
-just test-mount         # rclone mount against armadietto: writes, renames, Content-Type, app edits (needs FUSE)
+just test-login         # end-to-end browser login (config create -> consent -> headless Chromium), armadietto and RSilo
+just test-mount         # rclone mount, armadietto and RSilo: writes, renames, Content-Type, app edits (needs FUSE)
 just test-all           # rclone's full test_all matrix, with the backend exported into a clean rclone checkout at the go.mod version
 just upstream-sync      # export the backend, test servers and docs into the rclone fork (../rclone)
 just upstream-test-all  # upstream-sync, then the test_all matrix in the fork at rclone master: the run the PR quotes
@@ -57,7 +57,7 @@ just test-info          # rclone test info: which names armadietto and RSilo sto
 eval "$(just server)"   # throwaway armadietto + RCLONE_CONFIG_TESTREMOTESTORAGE_* for manual poking
 ```
 
-The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`). They use ports 28642 and 28643, registered in rclone's `PORTS.md` by the sync. Their scripts use rclone's `run.bash` and `docker.bash`, copied unchanged from rclone (identical in v1.75.2 and master), which reference-count the servers so parallel test suites share them. `just server`, `test-login` and `test-mount` use a separate armadietto on port 18011.
+The integration suite runs against two local servers, started and stopped automatically through rclone's convention for self-starting test servers (`fstest/testserver/init.d/`). They use ports 28642 and 28643, registered in rclone's `PORTS.md` by the sync. Their scripts use rclone's `run.bash` and `docker.bash`, copied unchanged from rclone (identical in v1.75.2 and master), which reference-count the servers so parallel test suites share them. `just server`, `test-login` and `test-mount` use separate containers: armadietto on port 18011 (`test/armadietto.sh`) and RSilo on 18012 (`test/rsilo.sh`). The RSilo one runs on the host network listening on 127.0.0.1, which keeps RSilo's dev identity on so the consent form can be approved without a login (Linux only); `just test-login armadietto` runs one server.
 
 | Remote | Server | Covers |
 |---|---|---|
@@ -113,7 +113,7 @@ Log in to a scratch scope (the remote lands in `./rclone.conf`), then point the 
 just test-remote rs5:rclone-test
 ```
 
-It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-11-02, after the mount fixes): passed, no failures, in 76s. The previous run (2026-10-19) was 86 passed, 0 failed, in 75s.
+It works in a random subfolder and removes it afterwards. Last run against 5apps (2026-11-10, after the code-review fixes): 85 passed, 0 failed, 34 skipped, in 76s. That is one fewer pass than the local servers because `FsRootCannotChangeHost` skips itself when the remote has a path (`rs5:rclone-test`). WebFinger discovery against 5apps over https was checked the same day with a non-interactive `config create` that stops before the browser step.
 
 ## License
 

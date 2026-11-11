@@ -48,9 +48,9 @@ server:
 server-stop:
     ./test/armadietto.sh stop
 
-# End-to-end browser login (rclone config create) against armadietto
-test-login: build
-    ./test/login-e2e.sh
+# End-to-end browser login (rclone config create) against armadietto and RSilo, or the servers named
+test-login *servers="armadietto rsilo": build
+    for s in {{servers}}; do ./test/login-e2e.sh $s || exit 1; done
 
 # Spike: loopback implicit-grant token capture, end to end against armadietto (docker)
 spike-loopback:
@@ -66,9 +66,9 @@ upstream-status:
       gh api "repos/$repo/issues/$n" --jq "\"$repo#$n  \(.state)  comments=\(.comments)  updated=\(.updated_at[:10])  \(.title)\""; \
     done
 
-# rclone mount against armadietto: writes, Content-Type on edits, renames, app edits (needs FUSE)
-test-mount: build
-    ./test/mount-e2e.sh
+# rclone mount against armadietto and RSilo, or the servers named: writes, Content-Type on edits, renames, app edits (needs FUSE)
+test-mount *servers="armadietto rsilo": build
+    for s in {{servers}}; do ./test/mount-e2e.sh $s || exit 1; done
 
 # rclone's full integration matrix (fstest/test_all) with the backend copied into an rclone checkout
 test-all *args:
